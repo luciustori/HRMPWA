@@ -1,0 +1,13 @@
+<IfModule mod_rewrite.c>
+    Options -Multiviews
+    RewriteEngine On
+    
+    # --- UPDATE BAGIAN INI ---
+    # Karena akses langsung ke domain utama, gunakan slash saja
+    RewriteBase /
+    # -----------------------
+
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteRule ^(.+)$ index.php?url=$1 [QSA,L]
+</IfModule>

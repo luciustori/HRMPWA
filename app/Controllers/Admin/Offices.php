@@ -3,11 +3,32 @@
 
 class Offices extends Controller {
 
+    private $db; // Pastikan ada properti ini
+
     public function __construct() {
-        if (!isset($_SESSION['user_id']) || $_SESSION['user_role'] != 'admin') {
-            header('Location: ' . BASEURL . '/auth');
+        // --- BARIS WAJIB (INI YANG KURANG) ---
+        parent::__construct(); 
+        // -------------------------------------
+
+        // Session start di bawah ini sebenarnya sudah di-handle oleh parent,
+        // tapi dibiarkan ada juga tidak apa-apa (aman).
+        if (!session_id()) session_start();
+
+        // 1. CEK LOGIN
+        if (!isset($_SESSION['user_id'])) {
+            header('Location: ' . BASEURL . '/Admin/LoginController');
             exit;
         }
+
+        // 2. CEK ROLE
+        $role = strtolower($_SESSION['role'] ?? '');
+        if ($role !== 'admin' && $role !== 'super_admin') {
+            header('Location: ' . BASEURL . '/staff/dashboard');
+            exit;
+        }
+
+        // 3. INIT DATABASE
+        $this->db = new Database;
     }
 
     public function index() {

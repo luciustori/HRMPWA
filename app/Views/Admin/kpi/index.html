@@ -1,0 +1,1027 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard KPI HR Management</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        [x-cloak] { display: none !important; }
+        .gradient-blue { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+        .gradient-green { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); }
+        .gradient-orange { background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); }
+        .gradient-purple { background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%); }
+        .card-hover { transition: all 0.3s ease; }
+        .card-hover:hover { transform: translateY(-5px); box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1); }
+    </style>
+</head>
+<body class="bg-gray-50" x-data="hrDashboard()">
+    
+    <!-- Header -->
+    <header class="bg-white shadow-sm">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+            <div class="flex justify-between items-center">
+                <div>
+                    <h1 class="text-3xl font-bold text-gray-900">Dashboard KPI HR Management</h1>
+                    <p class="text-sm text-gray-500 mt-1">Periode: <span x-text="currentPeriod"></span></p>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <select x-model="selectedPeriod" @change="updateData()" class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                        <option value="bulan">Bulan Ini</option>
+                        <option value="kuartal">Kuartal Ini</option>
+                        <option value="tahun">Tahun Ini</option>
+                    </select>
+                    <button @click="refreshData()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">
+                        <i class="fas fa-sync-alt mr-2"></i>Refresh
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        
+        <!-- KPI Cards Overview -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            
+            <!-- Total Karyawan -->
+            <div class="bg-white rounded-xl shadow-md p-6 card-hover">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm text-gray-500 font-medium">Total Karyawan</p>
+                        <h3 class="text-3xl font-bold text-gray-900 mt-2" x-text="kpi.totalKaryawan"></h3>
+                        <p class="text-sm mt-2" :class="kpi.pertumbuhanKaryawan >= 0 ? 'text-green-600' : 'text-red-600'">
+                            <i :class="kpi.pertumbuhanKaryawan >= 0 ? 'fas fa-arrow-up' : 'fas fa-arrow-down'"></i>
+                            <span x-text="Math.abs(kpi.pertumbuhanKaryawan) + '%'"></span> vs bulan lalu
+                        </p>
+                    </div>
+                    <div class="w-14 h-14 gradient-blue rounded-full flex items-center justify-center">
+                        <i class="fas fa-users text-white text-2xl"></i>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Turnover Rate -->
+            <div class="bg-white rounded-xl shadow-md p-6 card-hover">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm text-gray-500 font-medium">Turnover Rate</p>
+                        <h3 class="text-3xl font-bold text-gray-900 mt-2" x-text="kpi.turnoverRate + '%'"></h3>
+                        <p class="text-sm mt-2" :class="kpi.turnoverRate <= 10 ? 'text-green-600' : 'text-red-600'">
+                            <span x-text="kpi.turnoverRate <= 10 ? 'Baik' : 'Perlu Perhatian'"></span>
+                        </p>
+                    </div>
+                    <div class="w-14 h-14 gradient-green rounded-full flex items-center justify-center">
+                        <i class="fas fa-user-minus text-white text-2xl"></i>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Employee Engagement -->
+            <div class="bg-white rounded-xl shadow-md p-6 card-hover">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm text-gray-500 font-medium">Employee Engagement</p>
+                        <h3 class="text-3xl font-bold text-gray-900 mt-2" x-text="kpi.engagement + '%'"></h3>
+                        <p class="text-sm mt-2 text-blue-600">
+                            eNPS: <span x-text="kpi.eNPS"></span>
+                        </p>
+                    </div>
+                    <div class="w-14 h-14 gradient-orange rounded-full flex items-center justify-center">
+                        <i class="fas fa-smile text-white text-2xl"></i>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Cost per Employee -->
+            <div class="bg-white rounded-xl shadow-md p-6 card-hover">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm text-gray-500 font-medium">Cost per Employee</p>
+                        <h3 class="text-2xl font-bold text-gray-900 mt-2" x-text="formatCurrency(kpi.costPerEmployee)"></h3>
+                        <p class="text-sm mt-2 text-gray-600">
+                            Total HR Budget: <span x-text="formatCurrency(kpi.totalHRBudget)"></span>
+                        </p>
+                    </div>
+                    <div class="w-14 h-14 gradient-purple rounded-full flex items-center justify-center">
+                        <i class="fas fa-dollar-sign text-white text-2xl"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tabs Navigation -->
+        <div class="bg-white rounded-xl shadow-md mb-8">
+            <div class="border-b border-gray-200">
+                <nav class="flex -mb-px">
+                    <button @click="activeTab = 'recruitment'" 
+                            :class="activeTab === 'recruitment' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
+                            class="px-6 py-4 border-b-2 font-medium text-sm transition">
+                        <i class="fas fa-user-plus mr-2"></i>Rekrutmen & Talent
+                    </button>
+                    <button @click="activeTab = 'performance'" 
+                            :class="activeTab === 'performance' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
+                            class="px-6 py-4 border-b-2 font-medium text-sm transition">
+                        <i class="fas fa-chart-line mr-2"></i>Kinerja & Produktivitas
+                    </button>
+                    <button @click="activeTab = 'engagement'" 
+                            :class="activeTab === 'engagement' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
+                            class="px-6 py-4 border-b-2 font-medium text-sm transition">
+                        <i class="fas fa-heart mr-2"></i>Engagement & Wellbeing
+                    </button>
+                    <button @click="activeTab = 'finance'" 
+                            :class="activeTab === 'finance' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
+                            class="px-6 py-4 border-b-2 font-medium text-sm transition">
+                        <i class="fas fa-wallet mr-2"></i>Finansial & Budget
+                    </button>
+                    <button @click="activeTab = 'risk'" 
+                            :class="activeTab === 'risk' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
+                            class="px-6 py-4 border-b-2 font-medium text-sm transition">
+                        <i class="fas fa-exclamation-triangle mr-2"></i>People Risk
+                    </button>
+                </nav>
+            </div>
+
+            <!-- Tab Content -->
+            <div class="p-6">
+                
+                <!-- Recruitment & Talent Tab -->
+                <div x-show="activeTab === 'recruitment'" x-cloak>
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        
+                        <!-- Recruitment Metrics -->
+                        <div class="bg-gray-50 rounded-lg p-6">
+                            <h3 class="text-lg font-semibold text-gray-900 mb-4">
+                                <i class="fas fa-bullseye text-blue-600 mr-2"></i>Metrik Rekrutmen
+                            </h3>
+                            <div class="space-y-4">
+                                <div class="flex justify-between items-center">
+                                    <span class="text-sm text-gray-600">Time to Hire (Rata-rata)</span>
+                                    <span class="font-semibold text-gray-900" x-text="recruitment.timeToHire + ' hari'"></span>
+                                </div>
+                                <div class="w-full bg-gray-200 rounded-full h-2">
+                                    <div class="bg-blue-600 h-2 rounded-full" :style="`width: ${(recruitment.timeToHire/60)*100}%`"></div>
+                                </div>
+                                
+                                <div class="flex justify-between items-center mt-4">
+                                    <span class="text-sm text-gray-600">Cost per Hire</span>
+                                    <span class="font-semibold text-gray-900" x-text="formatCurrency(recruitment.costPerHire)"></span>
+                                </div>
+                                
+                                <div class="flex justify-between items-center">
+                                    <span class="text-sm text-gray-600">Recruiting Conversion Rate</span>
+                                    <span class="font-semibold text-gray-900" x-text="recruitment.conversionRate + '%'"></span>
+                                </div>
+                                <div class="w-full bg-gray-200 rounded-full h-2">
+                                    <div class="bg-green-600 h-2 rounded-full" :style="`width: ${recruitment.conversionRate}%`"></div>
+                                </div>
+                                
+                                <div class="flex justify-between items-center mt-4">
+                                    <span class="text-sm text-gray-600">Quality of Hire Score</span>
+                                    <span class="font-semibold text-gray-900" x-text="recruitment.qualityOfHire + '/5'"></span>
+                                </div>
+                                
+                                <div class="flex justify-between items-center">
+                                    <span class="text-sm text-gray-600">Posisi Terbuka Saat Ini</span>
+                                    <span class="font-semibold text-red-600" x-text="recruitment.openPositions"></span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Talent Pipeline -->
+                        <div class="bg-gray-50 rounded-lg p-6">
+                            <h3 class="text-lg font-semibold text-gray-900 mb-4">
+                                <i class="fas fa-funnel-dollar text-purple-600 mr-2"></i>Talent Pipeline
+                            </h3>
+                            <div class="space-y-3">
+                                <div class="bg-white rounded-lg p-4 border-l-4 border-blue-500">
+                                    <div class="flex justify-between items-center">
+                                        <span class="text-sm font-medium text-gray-700">Kandidat Baru</span>
+                                        <span class="text-xl font-bold text-blue-600" x-text="talentPipeline.newCandidates"></span>
+                                    </div>
+                                </div>
+                                <div class="bg-white rounded-lg p-4 border-l-4 border-yellow-500">
+                                    <div class="flex justify-between items-center">
+                                        <span class="text-sm font-medium text-gray-700">Dalam Screening</span>
+                                        <span class="text-xl font-bold text-yellow-600" x-text="talentPipeline.screening"></span>
+                                    </div>
+                                </div>
+                                <div class="bg-white rounded-lg p-4 border-l-4 border-orange-500">
+                                    <div class="flex justify-between items-center">
+                                        <span class="text-sm font-medium text-gray-700">Interview</span>
+                                        <span class="text-xl font-bold text-orange-600" x-text="talentPipeline.interview"></span>
+                                    </div>
+                                </div>
+                                <div class="bg-white rounded-lg p-4 border-l-4 border-green-500">
+                                    <div class="flex justify-between items-center">
+                                        <span class="text-sm font-medium text-gray-700">Offer Extended</span>
+                                        <span class="text-xl font-bold text-green-600" x-text="talentPipeline.offer"></span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Talent Retention -->
+                        <div class="bg-gray-50 rounded-lg p-6">
+                            <h3 class="text-lg font-semibold text-gray-900 mb-4">
+                                <i class="fas fa-user-shield text-green-600 mr-2"></i>Retensi Talent
+                            </h3>
+                            <div class="space-y-4">
+                                <div class="flex justify-between items-center">
+                                    <span class="text-sm text-gray-600">Retention Rate (12 Bulan)</span>
+                                    <span class="font-semibold text-green-600" x-text="retention.retentionRate + '%'"></span>
+                                </div>
+                                <div class="flex justify-between items-center">
+                                    <span class="text-sm text-gray-600">Karyawan Keluar (Bulan Ini)</span>
+                                    <span class="font-semibold text-red-600" x-text="retention.exitThisMonth"></span>
+                                </div>
+                                <div class="flex justify-between items-center">
+                                    <span class="text-sm text-gray-600">High Performer Retention</span>
+                                    <span class="font-semibold text-blue-600" x-text="retention.highPerformerRetention + '%'"></span>
+                                </div>
+                                <div class="flex justify-between items-center">
+                                    <span class="text-sm text-gray-600">Average Tenure</span>
+                                    <span class="font-semibold text-gray-900" x-text="retention.averageTenure + ' tahun'"></span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Exit Analysis -->
+                        <div class="bg-gray-50 rounded-lg p-6">
+                            <h3 class="text-lg font-semibold text-gray-900 mb-4">
+                                <i class="fas fa-door-open text-red-600 mr-2"></i>Analisis Exit
+                            </h3>
+                            <div class="space-y-3">
+                                <template x-for="reason in exitReasons" :key="reason.name">
+                                    <div>
+                                        <div class="flex justify-between items-center mb-1">
+                                            <span class="text-sm text-gray-600" x-text="reason.name"></span>
+                                            <span class="text-sm font-semibold text-gray-900" x-text="reason.percentage + '%'"></span>
+                                        </div>
+                                        <div class="w-full bg-gray-200 rounded-full h-2">
+                                            <div class="bg-red-500 h-2 rounded-full" :style="`width: ${reason.percentage}%`"></div>
+                                        </div>
+                                    </div>
+                                </template>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Performance & Productivity Tab -->
+                <div x-show="activeTab === 'performance'" x-cloak>
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        
+                        <!-- Performance Distribution -->
+                        <div class="bg-gray-50 rounded-lg p-6">
+                            <h3 class="text-lg font-semibold text-gray-900 mb-4">
+                                <i class="fas fa-chart-bar text-blue-600 mr-2"></i>Distribusi Kinerja
+                            </h3>
+                            <div class="space-y-3">
+                                <div class="bg-white rounded-lg p-4 border-l-4 border-green-500">
+                                    <div class="flex justify-between items-center">
+                                        <span class="text-sm font-medium text-gray-700">Sangat Baik (A)</span>
+                                        <span class="text-xl font-bold text-green-600" x-text="performance.excellent + '%'"></span>
+                                    </div>
+                                    <p class="text-xs text-gray-500 mt-1" x-text="Math.round((performance.excellent / 100) * kpi.totalKaryawan) + ' karyawan'"></p>
+                                </div>
+                                <div class="bg-white rounded-lg p-4 border-l-4 border-blue-500">
+                                    <div class="flex justify-between items-center">
+                                        <span class="text-sm font-medium text-gray-700">Baik (B)</span>
+                                        <span class="text-xl font-bold text-blue-600" x-text="performance.good + '%'"></span>
+                                    </div>
+                                    <p class="text-xs text-gray-500 mt-1" x-text="Math.round((performance.good / 100) * kpi.totalKaryawan) + ' karyawan'"></p>
+                                </div>
+                                <div class="bg-white rounded-lg p-4 border-l-4 border-yellow-500">
+                                    <div class="flex justify-between items-center">
+                                        <span class="text-sm font-medium text-gray-700">Cukup (C)</span>
+                                        <span class="text-xl font-bold text-yellow-600" x-text="performance.average + '%'"></span>
+                                    </div>
+                                    <p class="text-xs text-gray-500 mt-1" x-text="Math.round((performance.average / 100) * kpi.totalKaryawan) + ' karyawan'"></p>
+                                </div>
+                                <div class="bg-white rounded-lg p-4 border-l-4 border-red-500">
+                                    <div class="flex justify-between items-center">
+                                        <span class="text-sm font-medium text-gray-700">Perlu Perbaikan (D)</span>
+                                        <span class="text-xl font-bold text-red-600" x-text="performance.poor + '%'"></span>
+                                    </div>
+                                    <p class="text-xs text-gray-500 mt-1" x-text="Math.round((performance.poor / 100) * kpi.totalKaryawan) + ' karyawan'"></p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Productivity Metrics -->
+                        <div class="bg-gray-50 rounded-lg p-6">
+                            <h3 class="text-lg font-semibold text-gray-900 mb-4">
+                                <i class="fas fa-tachometer-alt text-purple-600 mr-2"></i>Metrik Produktivitas
+                            </h3>
+                            <div class="space-y-4">
+                                <div class="flex justify-between items-center">
+                                    <span class="text-sm text-gray-600">Revenue per Employee</span>
+                                    <span class="font-semibold text-gray-900" x-text="formatCurrency(productivity.revenuePerEmployee)"></span>
+                                </div>
+                                <div class="flex justify-between items-center">
+                                    <span class="text-sm text-gray-600">Goal Achievement Rate</span>
+                                    <span class="font-semibold text-gray-900" x-text="productivity.goalAchievement + '%'"></span>
+                                </div>
+                                <div class="w-full bg-gray-200 rounded-full h-2">
+                                    <div class="bg-purple-600 h-2 rounded-full" :style="`width: ${productivity.goalAchievement}%`"></div>
+                                </div>
+                                <div class="flex justify-between items-center mt-4">
+                                    <span class="text-sm text-gray-600">Project Completion Rate</span>
+                                    <span class="font-semibold text-gray-900" x-text="productivity.projectCompletion + '%'"></span>
+                                </div>
+                                <div class="flex justify-between items-center">
+                                    <span class="text-sm text-gray-600">Average Performance Score</span>
+                                    <span class="font-semibold text-gray-900" x-text="productivity.avgScore + '/5'"></span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Training & Development -->
+                        <div class="bg-gray-50 rounded-lg p-6">
+                            <h3 class="text-lg font-semibold text-gray-900 mb-4">
+                                <i class="fas fa-graduation-cap text-indigo-600 mr-2"></i>Training & Development
+                            </h3>
+                            <div class="space-y-4">
+                                <div class="flex justify-between items-center">
+                                    <span class="text-sm text-gray-600">Training Hours (Rata-rata)</span>
+                                    <span class="font-semibold text-gray-900" x-text="training.avgHoursPerEmployee + ' jam/karyawan'"></span>
+                                </div>
+                                <div class="flex justify-between items-center">
+                                    <span class="text-sm text-gray-600">Training Cost per Employee</span>
+                                    <span class="font-semibold text-gray-900" x-text="formatCurrency(training.costPerEmployee)"></span>
+                                </div>
+                                <div class="flex justify-between items-center">
+                                    <span class="text-sm text-gray-600">Training Completion Rate</span>
+                                    <span class="font-semibold text-green-600" x-text="training.completionRate + '%'"></span>
+                                </div>
+                                <div class="w-full bg-gray-200 rounded-full h-2">
+                                    <div class="bg-indigo-600 h-2 rounded-full" :style="`width: ${training.completionRate}%`"></div>
+                                </div>
+                                <div class="flex justify-between items-center mt-4">
+                                    <span class="text-sm text-gray-600">Training Effectiveness Score</span>
+                                    <span class="font-semibold text-gray-900" x-text="training.effectiveness + '/5'"></span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Top Performers -->
+                        <div class="bg-gray-50 rounded-lg p-6">
+                            <h3 class="text-lg font-semibold text-gray-900 mb-4">
+                                <i class="fas fa-trophy text-yellow-500 mr-2"></i>Top Performers
+                            </h3>
+                            <div class="space-y-3">
+                                <template x-for="(performer, index) in topPerformers" :key="index">
+                                    <div class="bg-white rounded-lg p-4 flex items-center justify-between">
+                                        <div class="flex items-center">
+                                            <div class="w-10 h-10 rounded-full bg-gradient-to-r from-yellow-400 to-orange-500 flex items-center justify-center text-white font-bold mr-3" x-text="index + 1"></div>
+                                            <div>
+                                                <p class="font-semibold text-gray-900" x-text="performer.name"></p>
+                                                <p class="text-xs text-gray-500" x-text="performer.department"></p>
+                                            </div>
+                                        </div>
+                                        <div class="text-right">
+                                            <p class="font-bold text-green-600" x-text="performer.score + '/5'"></p>
+                                            <p class="text-xs text-gray-500" x-text="performer.achievement"></p>
+                                        </div>
+                                    </div>
+                                </template>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Engagement & Wellbeing Tab -->
+                <div x-show="activeTab === 'engagement'" x-cloak>
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        
+                        <!-- Engagement Score -->
+                        <div class="bg-gray-50 rounded-lg p-6">
+                            <h3 class="text-lg font-semibold text-gray-900 mb-4">
+                                <i class="fas fa-heart-pulse text-red-600 mr-2"></i>Employee Engagement Score
+                            </h3>
+                            <div class="text-center mb-6">
+                                <div class="text-6xl font-bold text-blue-600" x-text="kpi.engagement + '%'"></div>
+                                <p class="text-sm text-gray-500 mt-2">Overall Engagement Score</p>
+                            </div>
+                            <div class="space-y-3">
+                                <div>
+                                    <div class="flex justify-between mb-1">
+                                        <span class="text-sm text-gray-600">Motivation</span>
+                                        <span class="text-sm font-semibold" x-text="engagementDetails.motivation + '%'"></span>
+                                    </div>
+                                    <div class="w-full bg-gray-200 rounded-full h-2">
+                                        <div class="bg-blue-600 h-2 rounded-full" :style="`width: ${engagementDetails.motivation}%`"></div>
+                                    </div>
+                                </div>
+                                <div>
+                                    <div class="flex justify-between mb-1">
+                                        <span class="text-sm text-gray-600">Relationships</span>
+                                        <span class="text-sm font-semibold" x-text="engagementDetails.relationships + '%'"></span>
+                                    </div>
+                                    <div class="w-full bg-gray-200 rounded-full h-2">
+                                        <div class="bg-green-600 h-2 rounded-full" :style="`width: ${engagementDetails.relationships}%`"></div>
+                                    </div>
+                                </div>
+                                <div>
+                                    <div class="flex justify-between mb-1">
+                                        <span class="text-sm text-gray-600">Meaning & Purpose</span>
+                                        <span class="text-sm font-semibold" x-text="engagementDetails.meaning + '%'"></span>
+                                    </div>
+                                    <div class="w-full bg-gray-200 rounded-full h-2">
+                                        <div class="bg-purple-600 h-2 rounded-full" :style="`width: ${engagementDetails.meaning}%`"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Satisfaction Metrics -->
+                        <div class="bg-gray-50 rounded-lg p-6">
+                            <h3 class="text-lg font-semibold text-gray-900 mb-4">
+                                <i class="fas fa-star text-yellow-500 mr-2"></i>Employee Satisfaction
+                            </h3>
+                            <div class="space-y-4">
+                                <div class="bg-white rounded-lg p-4">
+                                    <div class="flex justify-between items-center">
+                                        <span class="text-sm text-gray-600">Overall Satisfaction</span>
+                                        <span class="text-2xl font-bold text-yellow-600" x-text="satisfaction.overall + '/5'"></span>
+                                    </div>
+                                </div>
+                                <div class="bg-white rounded-lg p-4">
+                                    <div class="flex justify-between items-center">
+                                        <span class="text-sm text-gray-600">Work-Life Balance</span>
+                                        <span class="text-2xl font-bold text-blue-600" x-text="satisfaction.workLifeBalance + '/5'"></span>
+                                    </div>
+                                </div>
+                                <div class="bg-white rounded-lg p-4">
+                                    <div class="flex justify-between items-center">
+                                        <span class="text-sm text-gray-600">Management Support</span>
+                                        <span class="text-2xl font-bold text-green-600" x-text="satisfaction.management + '/5'"></span>
+                                    </div>
+                                </div>
+                                <div class="bg-white rounded-lg p-4">
+                                    <div class="flex justify-between items-center">
+                                        <span class="text-sm text-gray-600">Career Development</span>
+                                        <span class="text-2xl font-bold text-purple-600" x-text="satisfaction.careerDevelopment + '/5'"></span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Absenteeism -->
+                        <div class="bg-gray-50 rounded-lg p-6">
+                            <h3 class="text-lg font-semibold text-gray-900 mb-4">
+                                <i class="fas fa-calendar-times text-orange-600 mr-2"></i>Absenteeism & Leave
+                            </h3>
+                            <div class="space-y-4">
+                                <div class="flex justify-between items-center">
+                                    <span class="text-sm text-gray-600">Absenteeism Rate</span>
+                                    <span class="font-semibold text-gray-900" x-text="absenteeism.rate + '%'"></span>
+                                </div>
+                                <div class="w-full bg-gray-200 rounded-full h-2">
+                                    <div class="bg-orange-600 h-2 rounded-full" :style="`width: ${absenteeism.rate * 10}%`"></div>
+                                </div>
+                                <div class="flex justify-between items-center mt-4">
+                                    <span class="text-sm text-gray-600">Sick Leave Days (Bulan Ini)</span>
+                                    <span class="font-semibold text-red-600" x-text="absenteeism.sickLeave + ' hari'"></span>
+                                </div>
+                                <div class="flex justify-between items-center">
+                                    <span class="text-sm text-gray-600">Overtime Hours (Bulan Ini)</span>
+                                    <span class="font-semibold text-blue-600" x-text="absenteeism.overtime + ' jam'"></span>
+                                </div>
+                                <div class="flex justify-between items-center">
+                                    <span class="text-sm text-gray-600">Average Leave Balance</span>
+                                    <span class="font-semibold text-gray-900" x-text="absenteeism.leaveBalance + ' hari'"></span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Wellness Programs -->
+                        <div class="bg-gray-50 rounded-lg p-6">
+                            <h3 class="text-lg font-semibold text-gray-900 mb-4">
+                                <i class="fas fa-heartbeat text-pink-600 mr-2"></i>Wellness Programs
+                            </h3>
+                            <div class="space-y-3">
+                                <div class="bg-white rounded-lg p-4">
+                                    <div class="flex justify-between items-center">
+                                        <span class="text-sm text-gray-600">Program Participation Rate</span>
+                                        <span class="font-semibold text-green-600" x-text="wellness.participationRate + '%'"></span>
+                                    </div>
+                                </div>
+                                <div class="bg-white rounded-lg p-4">
+                                    <div class="flex justify-between items-center">
+                                        <span class="text-sm text-gray-600">Health Check Completion</span>
+                                        <span class="font-semibold text-blue-600" x-text="wellness.healthCheck + '%'"></span>
+                                    </div>
+                                </div>
+                                <div class="bg-white rounded-lg p-4">
+                                    <div class="flex justify-between items-center">
+                                        <span class="text-sm text-gray-600">Mental Health Support Usage</span>
+                                        <span class="font-semibold text-purple-600" x-text="wellness.mentalHealth + '%'"></span>
+                                    </div>
+                                </div>
+                                <div class="bg-white rounded-lg p-4">
+                                    <div class="flex justify-between items-center">
+                                        <span class="text-sm text-gray-600">Wellness Score</span>
+                                        <span class="font-semibold text-pink-600" x-text="wellness.score + '/5'"></span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Financial & Budget Tab -->
+                <div x-show="activeTab === 'finance'" x-cloak>
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        
+                        <!-- HR Budget Overview -->
+                        <div class="bg-gray-50 rounded-lg p-6">
+                            <h3 class="text-lg font-semibold text-gray-900 mb-4">
+                                <i class="fas fa-money-bill-wave text-green-600 mr-2"></i>HR Budget Overview
+                            </h3>
+                            <div class="space-y-4">
+                                <div class="bg-white rounded-lg p-4">
+                                    <div class="flex justify-between items-center">
+                                        <span class="text-sm text-gray-600">Total HR Budget</span>
+                                        <span class="text-xl font-bold text-gray-900" x-text="formatCurrency(kpi.totalHRBudget)"></span>
+                                    </div>
+                                </div>
+                                <div class="bg-white rounded-lg p-4">
+                                    <div class="flex justify-between items-center">
+                                        <span class="text-sm text-gray-600">Budget Utilized</span>
+                                        <span class="text-xl font-bold text-blue-600" x-text="financial.budgetUtilized + '%'"></span>
+                                    </div>
+                                    <div class="w-full bg-gray-200 rounded-full h-2 mt-2">
+                                        <div class="bg-blue-600 h-2 rounded-full" :style="`width: ${financial.budgetUtilized}%`"></div>
+                                    </div>
+                                </div>
+                                <div class="bg-white rounded-lg p-4">
+                                    <div class="flex justify-between items-center">
+                                        <span class="text-sm text-gray-600">Remaining Budget</span>
+                                        <span class="text-xl font-bold text-green-600" x-text="formatCurrency(financial.remainingBudget)"></span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Cost Breakdown -->
+                        <div class="bg-gray-50 rounded-lg p-6">
+                            <h3 class="text-lg font-semibold text-gray-900 mb-4">
+                                <i class="fas fa-chart-pie text-purple-600 mr-2"></i>Cost Breakdown
+                            </h3>
+                            <div class="space-y-3">
+                                <template x-for="cost in costBreakdown" :key="cost.category">
+                                    <div>
+                                        <div class="flex justify-between items-center mb-1">
+                                            <span class="text-sm text-gray-600" x-text="cost.category"></span>
+                                            <span class="text-sm font-semibold text-gray-900" x-text="cost.percentage + '%'"></span>
+                                        </div>
+                                        <div class="flex items-center gap-2">
+                                            <div class="flex-1 bg-gray-200 rounded-full h-2">
+                                                <div :class="cost.color" class="h-2 rounded-full" :style="`width: ${cost.percentage}%`"></div>
+                                            </div>
+                                            <span class="text-xs text-gray-500 w-24 text-right" x-text="formatCurrency(cost.amount)"></span>
+                                        </div>
+                                    </div>
+                                </template>
+                            </div>
+                        </div>
+
+                        <!-- Compensation Analysis -->
+                        <div class="bg-gray-50 rounded-lg p-6">
+                            <h3 class="text-lg font-semibold text-gray-900 mb-4">
+                                <i class="fas fa-hand-holding-usd text-blue-600 mr-2"></i>Compensation Analysis
+                            </h3>
+                            <div class="space-y-4">
+                                <div class="flex justify-between items-center">
+                                    <span class="text-sm text-gray-600">Average Salary</span>
+                                    <span class="font-semibold text-gray-900" x-text="formatCurrency(compensation.avgSalary)"></span>
+                                </div>
+                                <div class="flex justify-between items-center">
+                                    <span class="text-sm text-gray-600">Salary Increase Budget</span>
+                                    <span class="font-semibold text-gray-900" x-text="compensation.increasePercentage + '%'"></span>
+                                </div>
+                                <div class="w-full bg-gray-200 rounded-full h-2">
+                                    <div class="bg-green-600 h-2 rounded-full" :style="`width: ${compensation.increasePercentage * 10}%`"></div>
+                                </div>
+                                <div class="flex justify-between items-center mt-4">
+                                    <span class="text-sm text-gray-600">Bonus Payout (Tahun Ini)</span>
+                                    <span class="font-semibold text-blue-600" x-text="formatCurrency(compensation.bonusPayout)"></span>
+                                </div>
+                                <div class="flex justify-between items-center">
+                                    <span class="text-sm text-gray-600">Benefit Cost per Employee</span>
+                                    <span class="font-semibold text-gray-900" x-text="formatCurrency(compensation.benefitCost)"></span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- ROI Metrics -->
+                        <div class="bg-gray-50 rounded-lg p-6">
+                            <h3 class="text-lg font-semibold text-gray-900 mb-4">
+                                <i class="fas fa-percentage text-indigo-600 mr-2"></i>ROI Metrics
+                            </h3>
+                            <div class="space-y-4">
+                                <div class="bg-white rounded-lg p-4">
+                                    <div class="flex justify-between items-center">
+                                        <span class="text-sm text-gray-600">HR Cost as % of Revenue</span>
+                                        <span class="text-xl font-bold text-indigo-600" x-text="roi.hrCostPercentage + '%'"></span>
+                                    </div>
+                                </div>
+                                <div class="bg-white rounded-lg p-4">
+                                    <div class="flex justify-between items-center">
+                                        <span class="text-sm text-gray-600">Training ROI</span>
+                                        <span class="text-xl font-bold text-green-600" x-text="roi.trainingROI + '%'"></span>
+                                    </div>
+                                </div>
+                                <div class="bg-white rounded-lg p-4">
+                                    <div class="flex justify-between items-center">
+                                        <span class="text-sm text-gray-600">Recruitment ROI</span>
+                                        <span class="text-xl font-bold text-blue-600" x-text="roi.recruitmentROI + '%'"></span>
+                                    </div>
+                                </div>
+                                <div class="bg-white rounded-lg p-4">
+                                    <div class="flex justify-between items-center">
+                                        <span class="text-sm text-gray-600">HR Efficiency Ratio</span>
+                                        <span class="text-xl font-bold text-purple-600" x-text="roi.efficiencyRatio"></span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- People Risk Tab -->
+                <div x-show="activeTab === 'risk'" x-cloak>
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        
+                        <!-- Flight Risk Analysis -->
+                        <div class="bg-gray-50 rounded-lg p-6">
+                            <h3 class="text-lg font-semibold text-gray-900 mb-4">
+                                <i class="fas fa-user-clock text-red-600 mr-2"></i>Flight Risk Analysis
+                            </h3>
+                            <div class="space-y-3">
+                                <div class="bg-red-100 border-l-4 border-red-500 rounded-lg p-4">
+                                    <div class="flex justify-between items-center">
+                                        <div>
+                                            <p class="text-sm font-medium text-red-800">High Risk</p>
+                                            <p class="text-xs text-red-600 mt-1">Segera memerlukan tindakan</p>
+                                        </div>
+                                        <span class="text-2xl font-bold text-red-600" x-text="flightRisk.high"></span>
+                                    </div>
+                                </div>
+                                <div class="bg-yellow-100 border-l-4 border-yellow-500 rounded-lg p-4">
+                                    <div class="flex justify-between items-center">
+                                        <div>
+                                            <p class="text-sm font-medium text-yellow-800">Medium Risk</p>
+                                            <p class="text-xs text-yellow-600 mt-1">Perlu monitoring</p>
+                                        </div>
+                                        <span class="text-2xl font-bold text-yellow-600" x-text="flightRisk.medium"></span>
+                                    </div>
+                                </div>
+                                <div class="bg-green-100 border-l-4 border-green-500 rounded-lg p-4">
+                                    <div class="flex justify-between items-center">
+                                        <div>
+                                            <p class="text-sm font-medium text-green-800">Low Risk</p>
+                                            <p class="text-xs text-green-600 mt-1">Stabil</p>
+                                        </div>
+                                        <span class="text-2xl font-bold text-green-600" x-text="flightRisk.low"></span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Critical Positions -->
+                        <div class="bg-gray-50 rounded-lg p-6">
+                            <h3 class="text-lg font-semibold text-gray-900 mb-4">
+                                <i class="fas fa-shield-alt text-orange-600 mr-2"></i>Critical Positions at Risk
+                            </h3>
+                            <div class="space-y-3">
+                                <template x-for="position in criticalPositions" :key="position.title">
+                                    <div class="bg-white rounded-lg p-4 border-l-4" :class="position.riskLevel === 'High' ? 'border-red-500' : position.riskLevel === 'Medium' ? 'border-yellow-500' : 'border-blue-500'">
+                                        <div class="flex justify-between items-center">
+                                            <div>
+                                                <p class="font-semibold text-gray-900" x-text="position.title"></p>
+                                                <p class="text-xs text-gray-500 mt-1" x-text="position.department"></p>
+                                            </div>
+                                            <div class="text-right">
+                                                <span class="px-2 py-1 rounded-full text-xs font-medium" 
+                                                      :class="position.riskLevel === 'High' ? 'bg-red-100 text-red-800' : position.riskLevel === 'Medium' ? 'bg-yellow-100 text-yellow-800' : 'bg-blue-100 text-blue-800'"
+                                                      x-text="position.riskLevel"></span>
+                                                <p class="text-xs text-gray-500 mt-1" x-text="position.reason"></p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </template>
+                            </div>
+                        </div>
+
+                        <!-- Succession Planning -->
+                        <div class="bg-gray-50 rounded-lg p-6">
+                            <h3 class="text-lg font-semibold text-gray-900 mb-4">
+                                <i class="fas fa-sitemap text-blue-600 mr-2"></i>Succession Planning
+                            </h3>
+                            <div class="space-y-4">
+                                <div class="flex justify-between items-center">
+                                    <span class="text-sm text-gray-600">Critical Roles with Successors</span>
+                                    <span class="font-semibold text-green-600" x-text="succession.withSuccessors + '%'"></span>
+                                </div>
+                                <div class="w-full bg-gray-200 rounded-full h-2">
+                                    <div class="bg-green-600 h-2 rounded-full" :style="`width: ${succession.withSuccessors}%`"></div>
+                                </div>
+                                <div class="flex justify-between items-center mt-4">
+                                    <span class="text-sm text-gray-600">Ready Now Successors</span>
+                                    <span class="font-semibold text-blue-600" x-text="succession.readyNow"></span>
+                                </div>
+                                <div class="flex justify-between items-center">
+                                    <span class="text-sm text-gray-600">Ready in 1-2 Years</span>
+                                    <span class="font-semibold text-yellow-600" x-text="succession.readyLater"></span>
+                                </div>
+                                <div class="flex justify-between items-center">
+                                    <span class="text-sm text-gray-600">No Identified Successor</span>
+                                    <span class="font-semibold text-red-600" x-text="succession.noSuccessor"></span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Compliance & Risk -->
+                        <div class="bg-gray-50 rounded-lg p-6">
+                            <h3 class="text-lg font-semibold text-gray-900 mb-4">
+                                <i class="fas fa-clipboard-check text-purple-600 mr-2"></i>Compliance & Risk
+                            </h3>
+                            <div class="space-y-3">
+                                <div class="bg-white rounded-lg p-4">
+                                    <div class="flex justify-between items-center">
+                                        <span class="text-sm text-gray-600">Compliance Rate</span>
+                                        <span class="font-semibold" :class="compliance.rate >= 95 ? 'text-green-600' : 'text-red-600'" x-text="compliance.rate + '%'"></span>
+                                    </div>
+                                </div>
+                                <div class="bg-white rounded-lg p-4">
+                                    <div class="flex justify-between items-center">
+                                        <span class="text-sm text-gray-600">Pending HR Issues</span>
+                                        <span class="font-semibold text-orange-600" x-text="compliance.pendingIssues"></span>
+                                    </div>
+                                </div>
+                                <div class="bg-white rounded-lg p-4">
+                                    <div class="flex justify-between items-center">
+                                        <span class="text-sm text-gray-600">Policy Acknowledgment Rate</span>
+                                        <span class="font-semibold text-blue-600" x-text="compliance.policyAck + '%'"></span>
+                                    </div>
+                                </div>
+                                <div class="bg-white rounded-lg p-4">
+                                    <div class="flex justify-between items-center">
+                                        <span class="text-sm text-gray-600">Open Disciplinary Cases</span>
+                                        <span class="font-semibold text-red-600" x-text="compliance.disciplinaryCases"></span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Diversity Metrics -->
+                        <div class="bg-gray-50 rounded-lg p-6 lg:col-span-2">
+                            <h3 class="text-lg font-semibold text-gray-900 mb-4">
+                                <i class="fas fa-users text-teal-600 mr-2"></i>Diversity & Inclusion
+                            </h3>
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div class="bg-white rounded-lg p-4">
+                                    <p class="text-sm text-gray-600 mb-2">Gender Balance</p>
+                                    <div class="flex justify-between items-center">
+                                        <div class="text-center">
+                                            <p class="text-2xl font-bold text-blue-600" x-text="diversity.male + '%'"></p>
+                                            <p class="text-xs text-gray-500">Pria</p>
+                                        </div>
+                                        <div class="text-center">
+                                            <p class="text-2xl font-bold text-pink-600" x-text="diversity.female + '%'"></p>
+                                            <p class="text-xs text-gray-500">Wanita</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="bg-white rounded-lg p-4">
+                                    <p class="text-sm text-gray-600 mb-2">Women in Leadership</p>
+                                    <p class="text-3xl font-bold text-purple-600" x-text="diversity.womenLeadership + '%'"></p>
+                                </div>
+                                <div class="bg-white rounded-lg p-4">
+                                    <p class="text-sm text-gray-600 mb-2">Age Diversity Score</p>
+                                    <p class="text-3xl font-bold text-teal-600" x-text="diversity.ageScore + '/5'"></p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- Action Items -->
+        <div class="bg-white rounded-xl shadow-md p-6">
+            <h3 class="text-lg font-semibold text-gray-900 mb-4">
+                <i class="fas fa-tasks text-blue-600 mr-2"></i>Action Items & Recommendations
+            </h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <template x-for="action in actionItems" :key="action.title">
+                    <div class="border-l-4 rounded-lg p-4 bg-gray-50" :class="action.priority === 'High' ? 'border-red-500' : action.priority === 'Medium' ? 'border-yellow-500' : 'border-blue-500'">
+                        <div class="flex items-start justify-between mb-2">
+                            <h4 class="font-semibold text-gray-900 text-sm" x-text="action.title"></h4>
+                            <span class="px-2 py-1 rounded text-xs font-medium" 
+                                  :class="action.priority === 'High' ? 'bg-red-100 text-red-800' : action.priority === 'Medium' ? 'bg-yellow-100 text-yellow-800' : 'bg-blue-100 text-blue-800'"
+                                  x-text="action.priority"></span>
+                        </div>
+                        <p class="text-xs text-gray-600" x-text="action.description"></p>
+                    </div>
+                </template>
+            </div>
+        </div>
+
+    </main>
+
+    <script>
+        function hrDashboard() {
+            return {
+                currentPeriod: 'Februari 2026',
+                selectedPeriod: 'bulan',
+                activeTab: 'recruitment',
+                
+                kpi: {
+                    totalKaryawan: 485,
+                    pertumbuhanKaryawan: 3.2,
+                    turnoverRate: 8.5,
+                    engagement: 78,
+                    eNPS: 42,
+                    costPerEmployee: 15500000,
+                    totalHRBudget: 7517500000
+                },
+
+                recruitment: {
+                    timeToHire: 28,
+                    costPerHire: 8500000,
+                    conversionRate: 18,
+                    qualityOfHire: 4.2,
+                    openPositions: 12
+                },
+
+                talentPipeline: {
+                    newCandidates: 45,
+                    screening: 23,
+                    interview: 14,
+                    offer: 5
+                },
+
+                retention: {
+                    retentionRate: 91.5,
+                    exitThisMonth: 7,
+                    highPerformerRetention: 94,
+                    averageTenure: 3.8
+                },
+
+                exitReasons: [
+                    { name: 'Better Opportunity', percentage: 35 },
+                    { name: 'Compensation', percentage: 28 },
+                    { name: 'Career Growth', percentage: 20 },
+                    { name: 'Work-Life Balance', percentage: 10 },
+                    { name: 'Others', percentage: 7 }
+                ],
+
+                performance: {
+                    excellent: 22,
+                    good: 48,
+                    average: 25,
+                    poor: 5
+                },
+
+                productivity: {
+                    revenuePerEmployee: 285000000,
+                    goalAchievement: 84,
+                    projectCompletion: 89,
+                    avgScore: 3.8
+                },
+
+                training: {
+                    avgHoursPerEmployee: 32,
+                    costPerEmployee: 3200000,
+                    completionRate: 87,
+                    effectiveness: 4.1
+                },
+
+                topPerformers: [
+                    { name: 'Andi Wijaya', department: 'Sales', score: 4.9, achievement: '142% target' },
+                    { name: 'Siti Nurhaliza', department: 'Marketing', score: 4.8, achievement: '135% target' },
+                    { name: 'Budi Santoso', department: 'Engineering', score: 4.7, achievement: '128% target' },
+                    { name: 'Maya Putri', department: 'Finance', score: 4.6, achievement: '125% target' }
+                ],
+
+                engagementDetails: {
+                    motivation: 80,
+                    relationships: 76,
+                    meaning: 78
+                },
+
+                satisfaction: {
+                    overall: 4.1,
+                    workLifeBalance: 3.9,
+                    management: 4.2,
+                    careerDevelopment: 3.8
+                },
+
+                absenteeism: {
+                    rate: 2.8,
+                    sickLeave: 142,
+                    overtime: 1250,
+                    leaveBalance: 8.5
+                },
+
+                wellness: {
+                    participationRate: 64,
+                    healthCheck: 82,
+                    mentalHealth: 28,
+                    score: 3.9
+                },
+
+                financial: {
+                    budgetUtilized: 68,
+                    remainingBudget: 2405600000
+                },
+
+                costBreakdown: [
+                    { category: 'Salaries & Benefits', percentage: 75, amount: 5638125000, color: 'bg-blue-600' },
+                    { category: 'Training & Development', percentage: 10, amount: 751750000, color: 'bg-green-600' },
+                    { category: 'Recruitment', percentage: 8, amount: 601400000, color: 'bg-purple-600' },
+                    { category: 'Wellness Programs', percentage: 4, amount: 300700000, color: 'bg-pink-600' },
+                    { category: 'HR Operations', percentage: 3, amount: 225525000, color: 'bg-yellow-600' }
+                ],
+
+                compensation: {
+                    avgSalary: 12500000,
+                    increasePercentage: 7.5,
+                    bonusPayout: 1850000000,
+                    benefitCost: 2800000
+                },
+
+                roi: {
+                    hrCostPercentage: 5.4,
+                    trainingROI: 285,
+                    recruitmentROI: 178,
+                    efficiencyRatio: 1.42
+                },
+
+                flightRisk: {
+                    high: 23,
+                    medium: 47,
+                    low: 415
+                },
+
+                criticalPositions: [
+                    { title: 'Head of Engineering', department: 'Technology', riskLevel: 'High', reason: 'No successor' },
+                    { title: 'Finance Manager', department: 'Finance', riskLevel: 'Medium', reason: 'Exploring options' },
+                    { title: 'Sales Director', department: 'Sales', riskLevel: 'High', reason: 'High competition' },
+                    { title: 'HR Manager', department: 'HR', riskLevel: 'Low', reason: 'Successor ready' }
+                ],
+
+                succession: {
+                    withSuccessors: 68,
+                    readyNow: 15,
+                    readyLater: 28,
+                    noSuccessor: 12
+                },
+
+                compliance: {
+                    rate: 96.5,
+                    pendingIssues: 8,
+                    policyAck: 94,
+                    disciplinaryCases: 3
+                },
+
+                diversity: {
+                    male: 58,
+                    female: 42,
+                    womenLeadership: 38,
+                    ageScore: 4.2
+                },
+
+                actionItems: [
+                    { title: 'Address High Flight Risk', description: 'Conduct retention interviews with 23 high-risk employees', priority: 'High' },
+                    { title: 'Fill Critical Positions', description: '12 open positions need immediate attention', priority: 'High' },
+                    { title: 'Improve Training ROI', description: 'Enhance training effectiveness measurement', priority: 'Medium' },
+                    { title: 'Succession Planning', description: 'Identify successors for 12 critical roles', priority: 'High' },
+                    { title: 'Engagement Programs', description: 'Launch initiatives to reach 85% engagement', priority: 'Medium' },
+                    { title: 'Diversity Initiatives', description: 'Increase women in leadership to 45%', priority: 'Low' }
+                ],
+
+                formatCurrency(value) {
+                    return 'Rp ' + value.toLocaleString('id-ID');
+                },
+
+                updateData() {
+                    console.log('Period changed to:', this.selectedPeriod);
+                },
+
+                refreshData() {
+                    console.log('Refreshing dashboard data...');
+                    alert('Data berhasil di-refresh!');
+                }
+            }
+        }
+    </script>
+</body>
+</html>

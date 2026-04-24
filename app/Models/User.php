@@ -8,9 +8,15 @@ class User {
         $this->db = new Database;
     }
 
-    // Cari user berdasarkan username
+    // Cari user berdasarkan username DAN ambil data karyawan
     public function findUserByUsername($username) {
-        $this->db->query("SELECT * FROM users WHERE username = :username AND is_active = 1");
+        // FIX: Tambahkan LEFT JOIN ke employees biar dapet first_name & last_name
+        $this->db->query("
+            SELECT u.*, e.first_name, e.last_name, e.employee_number 
+            FROM users u 
+            LEFT JOIN employees e ON u.employee_id = e.id 
+            WHERE u.username = :username AND u.is_active = 1
+        ");
         $this->db->bind(':username', $username);
         return $this->db->single();
     }

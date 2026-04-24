@@ -120,7 +120,7 @@ class Employee {
         $this->db->bind(':email', $data['email']);
         $this->db->bind(':phone', $data['phone']);
         $this->db->bind(':address', $data['address']);
-        $this->db->bind(':dept', $data['department_id']);
+        $this->db->bind(':dept', !empty($data['department_id']) ? $data['department_id'] : null);
         $this->db->bind(':position', $data['position']);
         $this->db->bind(':level', $data['employee_level']);
         $this->db->bind(':status', $data['employee_status']);

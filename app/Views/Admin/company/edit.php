@@ -19,32 +19,32 @@
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                         <div class="md:col-span-2">
                             <label class="block text-sm font-bold text-gray-700 mb-2">Nama Perusahaan</label>
-                            <input type="text" name="company_name" value="<?= $company['company_name'] ?>" required class="w-full rounded-lg border-gray-300 focus:ring-indigo-500 shadow-sm">
+                            <input type="text" name="company_name" value="<?= $company['company_name'] ?>" required class="w-full px-3 py-2 border rounded-lg border-slate-300 focus:ring-2 focus:ring-purple-500">
                         </div>
                         <div>
                             <label class="block text-sm font-bold text-gray-700 mb-2">Kode</label>
-                            <input type="text" name="company_code" value="<?= $company['company_code'] ?>" required class="w-full rounded-lg border-gray-300 uppercase font-mono shadow-sm">
+                            <input type="text" name="company_code" value="<?= $company['company_code'] ?>" required class="w-full px-3 py-2 border rounded-lg border-slate-300 focus:ring-2 focus:ring-purple-500">
                         </div>
                     </div>
 
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div>
                             <label class="block text-sm font-bold text-gray-700 mb-2">Email Resmi</label>
-                            <input type="email" name="email" value="<?= $company['email'] ?>" class="w-full rounded-lg border-gray-300 shadow-sm">
+                            <input type="email" name="email" value="<?= $company['email'] ?>" class="w-full px-3 py-2 border rounded-lg border-slate-300 focus:ring-2 focus:ring-purple-500">
                         </div>
                         <div>
                             <label class="block text-sm font-bold text-gray-700 mb-2">No. Telepon</label>
-                            <input type="text" name="phone" value="<?= $company['phone'] ?>" class="w-full rounded-lg border-gray-300 shadow-sm">
+                            <input type="text" name="phone" value="<?= $company['phone'] ?>" class="w-full px-3 py-2 border rounded-lg border-slate-300 focus:ring-2 focus:ring-purple-500">
                         </div>
                         <div class="md:col-span-2">
                             <label class="block text-sm font-bold text-gray-700 mb-2">Website</label>
-                            <input type="url" name="website" value="<?= $company['website'] ?>" placeholder="https://" class="w-full rounded-lg border-gray-300 shadow-sm">
+                            <input type="url" name="website" value="<?= $company['website'] ?>" placeholder="https://" class="w-full px-3 py-2 border rounded-lg border-slate-300 focus:ring-2 focus:ring-purple-500">
                         </div>
                     </div>
 
                     <div>
                         <label class="block text-sm font-bold text-gray-700 mb-2">Alamat Lengkap</label>
-                        <textarea name="address" rows="3" class="w-full rounded-lg border-gray-300 shadow-sm"><?= $company['address'] ?></textarea>
+                        <textarea name="address" rows="3" class="w-full px-3 py-2 border rounded-lg border-slate-300 focus:ring-2 focus:ring-purple-500"><?= $company['address'] ?></textarea>
                     </div>
 
                     <div class="border-t pt-6">

@@ -1,131 +1,198 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-<style>
-    /* Custom Scrollbar untuk Widget */
-    .custom-scroll::-webkit-scrollbar { width: 4px; }
-    .custom-scroll::-webkit-scrollbar-track { background: #f1f1f1; }
-    .custom-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
-    .custom-scroll::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
-    
-    /* Animation Fade In */
-    .fade-in-up { animation: fadeInUp 0.5s ease-out forwards; opacity: 0; transform: translateY(20px); }
-    @keyframes fadeInUp { to { opacity: 1; transform: translateY(0); } }
-    
-    .delay-100 { animation-delay: 100ms; }
-    .delay-200 { animation-delay: 200ms; }
-    .delay-300 { animation-delay: 300ms; }
-</style>
-
-<div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 fade-in-up">
+<div class="flex flex-col md:flex-row justify-between items-center mb-8 gap-4">
     <div>
-        <h1 class="text-3xl font-extrabold text-gray-800 tracking-tight">
-            Dashboard <span class="text-indigo-600">Overview</span>
-        </h1>
-        <p class="text-gray-500 mt-1">
-            Selamat datang, <span class="font-bold text-gray-700"><?= explode(' ', $_SESSION['full_name'])[0] ?></span>! Hari ini produktivitas tim terlihat bagus. 🚀
-        </p>
+        <h1 class="text-3xl font-black text-gray-800 tracking-tight">Executive Dashboard</h1>
+        <p class="text-sm text-gray-500">Overview performa & statistik perusahaan.</p>
     </div>
-    <div class="mt-4 md:mt-0 flex gap-3">
-        <button class="bg-white border border-gray-200 text-gray-600 px-4 py-2 rounded-xl text-sm font-semibold shadow-sm hover:bg-gray-50 transition">
-            <i class="fas fa-download mr-2"></i> Report
-        </button>
-        <button class="bg-indigo-600 text-white px-4 py-2 rounded-xl text-sm font-bold shadow-lg shadow-indigo-200 hover:bg-indigo-700 transition transform hover:-translate-y-0.5">
-            <i class="fas fa-plus mr-2"></i> New Task
-        </button>
+    <div class="flex items-center gap-3">
+        <form method="GET" class="bg-white px-3 py-2 rounded-lg border border-gray-200 shadow-sm flex items-center">
+            <i class="ri-calendar-line text-gray-400 mr-2"></i>
+            <input type="month" name="filter_period" value="<?= $selected_year . '-' . $selected_month ?>" 
+                   onchange="const [y, m] = this.value.split('-'); window.location.href='?year='+y+'&month='+m"
+                   class="text-sm font-bold text-gray-700 border-none focus:ring-0 p-0 cursor-pointer bg-transparent">
+        </form>
+        <a href="<?= BASEURL ?>/admin/dashboard/print_report?year=<?= $selected_year ?>&month=<?= $selected_month ?>" target="_blank" class="bg-slate-800 text-white px-4 py-2 rounded-lg text-sm font-bold shadow hover:bg-slate-700 transition flex items-center gap-2">
+            <i class="ri-printer-line"></i> Report
+        </a>
     </div>
 </div>
 
-<div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+<div class="grid grid-cols-1 md:grid-cols-4 gap-5 mb-8">
+    <div class="bg-gradient-to-br from-indigo-600 to-blue-700 p-5 rounded-2xl text-white shadow-lg relative overflow-hidden">
+        <p class="text-xs font-bold text-indigo-200 uppercase tracking-wider">Est. Payroll Expense</p>
+        <h3 class="text-2xl font-black mt-1">Rp <?= number_format($stats['payroll_est'] / 1000000, 1, ',', '.') ?> Jt</h3>
+        <i class="ri-wallet-3-fill absolute -bottom-4 -right-4 text-7xl text-white opacity-10"></i>
+    </div>
+    <div class="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm">
+        <div class="flex justify-between items-start">
+            <div><p class="text-xs font-bold text-gray-400 uppercase">Total Pegawai</p><h3 class="text-2xl font-black text-gray-800 mt-1"><?= $stats['total_emp'] ?></h3></div>
+            <div class="p-2 bg-blue-50 text-blue-600 rounded-lg"><i class="ri-team-fill text-xl"></i></div>
+        </div>
+    </div>
+    <div class="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm">
+        <div class="flex justify-between items-start">
+            <div><p class="text-xs font-bold text-gray-400 uppercase">Kehadiran (Avg)</p><h3 class="text-2xl font-black text-gray-800 mt-1"><?= $stats['attendance_rate'] ?>%</h3></div>
+            <div class="p-2 bg-emerald-50 text-emerald-600 rounded-lg"><i class="ri-bar-chart-grouped-fill text-xl"></i></div>
+        </div>
+    </div>
+    <div class="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm">
+        <div class="flex justify-between items-start">
+            <div><p class="text-xs font-bold text-gray-400 uppercase">Keterlambatan</p><h3 class="text-2xl font-black text-gray-800 mt-1"><?= $stats['total_late'] ?></h3></div>
+            <div class="p-2 bg-orange-50 text-orange-600 rounded-lg"><i class="ri-timer-flash-line text-xl"></i></div>
+        </div>
+    </div>
+</div>
 
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-6 mb-8">
+    
     <div class="lg:col-span-8 space-y-6">
         
-        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 fade-in-up delay-100">
-            <div class="bg-gradient-to-br from-blue-500 to-blue-600 p-5 rounded-2xl text-white shadow-lg relative overflow-hidden group">
-                <div class="relative z-10">
-                    <p class="text-blue-100 text-xs font-bold uppercase tracking-wider">Total Pegawai</p>
-                    <h3 class="text-3xl font-extrabold mt-1"><?= $stats['total_emp'] ?></h3>
-                </div>
-                <i class="fas fa-users absolute -right-3 -bottom-3 text-6xl text-white opacity-20 group-hover:scale-110 transition-transform"></i>
-            </div>
-
-            <div class="bg-gradient-to-br from-emerald-400 to-emerald-600 p-5 rounded-2xl text-white shadow-lg relative overflow-hidden group">
-                <div class="relative z-10">
-                    <p class="text-emerald-100 text-xs font-bold uppercase tracking-wider">Hadir Hari Ini</p>
-                    <h3 class="text-3xl font-extrabold mt-1"><?= $stats['present'] ?></h3>
-                </div>
-                <i class="fas fa-user-check absolute -right-3 -bottom-3 text-6xl text-white opacity-20 group-hover:scale-110 transition-transform"></i>
-            </div>
-
-            <div class="bg-gradient-to-br from-orange-400 to-orange-600 p-5 rounded-2xl text-white shadow-lg relative overflow-hidden group">
-                <div class="relative z-10">
-                    <p class="text-orange-100 text-xs font-bold uppercase tracking-wider">Terlambat</p>
-                    <h3 class="text-3xl font-extrabold mt-1"><?= $stats['late'] ?></h3>
-                </div>
-                <i class="fas fa-running absolute -right-3 -bottom-3 text-6xl text-white opacity-20 group-hover:scale-110 transition-transform"></i>
-            </div>
-
-            <div class="bg-gradient-to-br from-pink-500 to-rose-600 p-5 rounded-2xl text-white shadow-lg relative overflow-hidden group">
-                <div class="relative z-10">
-                    <p class="text-pink-100 text-xs font-bold uppercase tracking-wider">Pending Request</p>
-                    <h3 class="text-3xl font-extrabold mt-1"><?= $stats['requests'] ?></h3>
-                </div>
-                <i class="fas fa-bell absolute -right-3 -bottom-3 text-6xl text-white opacity-20 group-hover:scale-110 transition-transform animate-pulse"></i>
-            </div>
-        </div>
-
-        <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 fade-in-up delay-200">
+        <div class="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
             <div class="flex justify-between items-center mb-6">
-                <h3 class="text-lg font-bold text-gray-800">Tren Kehadiran (7 Hari Terakhir)</h3>
-                <select class="text-xs bg-gray-50 border-none rounded-lg p-2 font-medium text-gray-600 cursor-pointer hover:bg-gray-100">
-                    <option>Minggu Ini</option>
-                    <option>Bulan Ini</option>
-                </select>
+                <h3 class="font-bold text-gray-800 text-lg">Trend Kehadiran</h3>
+                <span class="text-xs font-medium text-gray-500 bg-gray-100 px-2 py-1 rounded"><?= $period_text ?></span>
             </div>
             <div class="h-64 w-full">
                 <canvas id="attendanceChart"></canvas>
             </div>
         </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 fade-in-up delay-300">
+        <div class="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
+            <h3 class="font-bold text-gray-800 text-lg mb-4 flex items-center gap-2">
+                <i class="ri-trophy-fill text-yellow-500"></i> Top 5 KPI Performers
+            </h3>
             
-            <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-                <h3 class="font-bold text-gray-800 mb-4 flex items-center gap-2">
-                    <i class="fas fa-rocket text-indigo-500"></i> Quick Actions
-                </h3>
-                <div class="grid grid-cols-2 gap-3">
-                    <a href="<?= BASEURL ?>/admin/employees/create" class="flex flex-col items-center justify-center p-4 bg-indigo-50 rounded-xl hover:bg-indigo-100 transition cursor-pointer group">
-                        <i class="fas fa-user-plus text-indigo-600 text-xl mb-2 group-hover:scale-110 transition"></i>
-                        <span class="text-xs font-bold text-indigo-700">Add Employee</span>
-                    </a>
-                    <div class="flex flex-col items-center justify-center p-4 bg-emerald-50 rounded-xl hover:bg-emerald-100 transition cursor-pointer group">
-                        <i class="fas fa-file-export text-emerald-600 text-xl mb-2 group-hover:scale-110 transition"></i>
-                        <span class="text-xs font-bold text-emerald-700">Export Rekap</span>
-                    </div>
-                    <div class="flex flex-col items-center justify-center p-4 bg-amber-50 rounded-xl hover:bg-amber-100 transition cursor-pointer group">
-                        <i class="fas fa-bullhorn text-amber-600 text-xl mb-2 group-hover:scale-110 transition"></i>
-                        <span class="text-xs font-bold text-amber-700">Broadcast</span>
-                    </div>
-                    <div class="flex flex-col items-center justify-center p-4 bg-purple-50 rounded-xl hover:bg-purple-100 transition cursor-pointer group">
-                        <i class="fas fa-cog text-purple-600 text-xl mb-2 group-hover:scale-110 transition"></i>
-                        <span class="text-xs font-bold text-purple-700">Settings</span>
-                    </div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm text-left">
+                    <thead class="text-xs text-gray-500 uppercase bg-gray-50/50 border-b border-gray-100">
+                        <tr>
+                            <th class="px-4 py-3">Rank</th>
+                            <th class="px-4 py-3">Karyawan</th>
+                            <th class="px-4 py-3 text-center">Disiplin (40%)</th>
+                            <th class="px-4 py-3 text-center">Kualitas (60%)</th>
+                            <th class="px-4 py-3 text-center">Total Score</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-50">
+                        <?php if(empty($top_employees)): ?>
+                            <tr><td colspan="5" class="px-4 py-6 text-center text-gray-400 italic">Belum ada data untuk periode ini.</td></tr>
+                        <?php else: ?>
+                            <?php foreach($top_employees as $idx => $emp): 
+                                $rankColor = match($idx) { 0=>'bg-yellow-100 text-yellow-700', 1=>'bg-gray-100 text-gray-600', 2=>'bg-orange-50 text-orange-700', default=>'bg-slate-50 text-slate-500' };
+                            ?>
+                            <tr class="hover:bg-slate-50/50 transition">
+                                <td class="px-4 py-3">
+                                    <div class="w-8 h-8 rounded-lg flex items-center justify-center font-black text-xs <?= $rankColor ?>">
+                                        #<?= $idx+1 ?>
+                                    </div>
+                                </td>
+                                <td class="px-4 py-3">
+                                    <div class="flex items-center gap-3">
+                                        <?php if($emp['profile_photo_path']): ?>
+                                            <img src="<?= BASEURL ?>/uploads/profiles/<?= $emp['profile_photo_path'] ?>" class="w-8 h-8 rounded-full object-cover">
+                                        <?php else: ?>
+                                            <div class="w-8 h-8 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center font-bold text-xs">
+                                                <?= substr($emp['first_name'], 0, 1) ?>
+                                            </div>
+                                        <?php endif; ?>
+                                        <div>
+                                            <div class="font-bold text-gray-800"><?= $emp['first_name'] . ' ' . $emp['last_name'] ?></div>
+                                            <div class="text-[10px] text-gray-500"><?= $emp['position'] ?></div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td class="px-4 py-3 text-center">
+                                    <div class="font-bold text-emerald-600"><?= $emp['att_pct'] ?>%</div>
+                                    <div class="text-[10px] text-gray-400"><?= $emp['present_days'] ?>/<?= $total_days ?> Hari</div>
+                                </td>
+                                <td class="px-4 py-3 text-center">
+                                    <div class="font-bold text-blue-600"><?= $emp['avg_task_score'] ?></div>
+                                    <div class="text-[10px] text-gray-400">Avg. Rating</div>
+                                </td>
+                                <td class="px-4 py-3 text-center">
+                                    <span class="text-base font-black text-indigo-700"><?= $emp['kpi_score'] ?></span>
+                                </td>
+                            </tr>
+                            <?php endforeach; ?>
+                        <?php endif; ?>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    </div>
+
+    <div class="lg:col-span-4 space-y-6">
+        
+        <div class="bg-gradient-to-br from-pink-500 to-rose-600 p-5 rounded-2xl text-white shadow-lg relative overflow-hidden">
+            <div class="relative z-10">
+                <h4 class="font-bold text-white flex items-center gap-2 mb-4">
+                    <i class="ri-cake-2-fill text-yellow-300"></i> Ulang Tahun (Bulan Ini)
+                </h4>
+                
+                <div class="space-y-3 max-h-[220px] overflow-y-auto custom-scroll pr-2">
+                    <?php if(empty($birthdays)): ?>
+                        <div class="text-center py-4 bg-white/10 rounded-xl border border-white/10">
+                            <p class="text-xs text-pink-100 italic">Tidak ada yang ultah bulan ini.</p>
+                        </div>
+                    <?php else: ?>
+                        <?php foreach($birthdays as $bday): ?>
+                        <div class="flex items-center gap-3 bg-white/10 p-2.5 rounded-xl border border-white/10 backdrop-blur-sm">
+                            <?php if($bday['profile_photo_path']): ?>
+                                <img src="<?= BASEURL ?>/uploads/profiles/<?= $bday['profile_photo_path'] ?>" class="w-10 h-10 rounded-full object-cover border-2 border-white/30">
+                            <?php else: ?>
+                                <div class="w-10 h-10 rounded-full bg-white text-pink-600 flex items-center justify-center font-bold text-xs">
+                                    <?= substr($bday['full_name'], 0, 1) ?>
+                                </div>
+                            <?php endif; ?>
+                            
+                            <div class="flex-1">
+                                <h5 class="text-sm font-bold text-white truncate"><?= explode(' ', $bday['full_name'])[0] ?></h5>
+                                <p class="text-[10px] text-pink-200">
+                                    Tanggal <?= $bday['tgl'] ?>
+                                    <?php if($bday['tgl'] == date('d') && $selected_month == date('m')): ?>
+                                        <span class="ml-1 bg-yellow-400 text-yellow-900 px-1.5 py-0.5 rounded text-[9px] font-bold">HARI INI!</span>
+                                    <?php endif; ?>
+                                </p>
+                            </div>
+                            <div class="text-xl">🎂</div>
+                        </div>
+                        <?php endforeach; ?>
+                    <?php endif; ?>
                 </div>
             </div>
+            <i class="ri-gift-line absolute -bottom-6 -right-6 text-9xl text-white opacity-10 rotate-12"></i>
+        </div>
 
-            <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-                <h3 class="font-bold text-gray-800 mb-4 flex items-center gap-2">
-                    <i class="fas fa-chart-pie text-pink-500"></i> KPI & Goals
-                </h3>
-                <div class="space-y-5">
-                    <?php foreach($kpi as $goal): ?>
-                    <div>
-                        <div class="flex justify-between text-xs font-bold text-gray-600 mb-1">
-                            <span><?= $goal['title'] ?></span>
-                            <span><?= $goal['progress'] ?>%</span>
-                        </div>
-                        <div class="w-full bg-gray-100 rounded-full h-2.5">
-                            <div class="<?= $goal['color'] ?> h-2.5 rounded-full shadow-md transition-all duration-1000 ease-out" style="width: <?= $goal['progress'] ?>%"></div>
-                        </div>
+        <div class="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm">
+            <h4 class="font-bold text-gray-700 text-sm mb-4 border-b pb-2">Task Progress</h4>
+            <div class="flex items-center gap-4">
+                <div class="w-24 h-24 relative">
+                    <canvas id="taskChart"></canvas>
+                </div>
+                <div class="text-xs space-y-2 flex-1">
+                    <div class="flex justify-between"><span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-green-500"></span> Selesai</span> <b><?= $chart_tasks[0] ?></b></div>
+                    <div class="flex justify-between"><span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-blue-500"></span> Proses</span> <b><?= $chart_tasks[1] ?></b></div>
+                    <div class="flex justify-between"><span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-gray-300"></span> Pending</span> <b><?= $chart_tasks[2] ?></b></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm">
+            <h4 class="font-bold text-gray-700 text-sm mb-4 border-b pb-2">Demografi Usia</h4>
+            <div class="flex items-center gap-4">
+                <div class="w-24 h-24 relative">
+                    <canvas id="ageChart"></canvas>
+                </div>
+                <div class="text-xs space-y-1 flex-1 text-gray-500">
+                    <?php 
+                        $colors = ['#6366F1', '#8B5CF6', '#EC4899', '#F43F5E'];
+                        foreach($chart_age['labels'] as $i => $label): 
+                    ?>
+                    <div class="flex justify-between">
+                        <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full" style="background:<?= $colors[$i] ?>"></span> <?= $label ?></span>
+                        <b><?= $chart_age['data'][$i] ?></b>
                     </div>
                     <?php endforeach; ?>
                 </div>
@@ -133,138 +200,93 @@
         </div>
 
     </div>
+</div>
 
-    <div class="lg:col-span-4 space-y-6">
-
-        <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 fade-in-up delay-200">
-            <div class="flex justify-between items-center mb-4">
-                <h3 class="font-bold text-gray-800">Butuh Persetujuan</h3>
-                <span class="bg-red-100 text-red-600 text-xs px-2 py-1 rounded-full font-bold">3 Pending</span>
+<div class="mb-8">
+    <h3 class="font-bold text-gray-800 text-lg mb-4">Butuh Persetujuan</h3>
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <a href="<?= BASEURL ?>/admin/tasks?status=pending" class="bg-white p-4 rounded-xl border border-gray-100 shadow-sm hover:border-indigo-300 transition flex items-center justify-between group">
+            <div class="flex items-center gap-3">
+                <div class="p-2 bg-indigo-50 text-indigo-600 rounded-lg group-hover:bg-indigo-600 group-hover:text-white transition"><i class="ri-task-fill"></i></div>
+                <span class="text-sm font-bold text-gray-700">Task Approval</span>
             </div>
-            
-            <div class="space-y-4">
-                <?php foreach($approvals as $req): ?>
-                <div class="flex items-center gap-3 p-3 rounded-xl hover:bg-gray-50 transition border border-transparent hover:border-gray-100">
-                    <div class="w-10 h-10 rounded-full bg-gradient-to-tr from-indigo-500 to-purple-500 flex items-center justify-center text-white text-xs font-bold shadow-md">
-                        <?= $req['avatar'] ?>
-                    </div>
-                    <div class="flex-1">
-                        <h4 class="text-sm font-bold text-gray-800"><?= $req['name'] ?></h4>
-                        <p class="text-xs text-gray-500"><?= $req['type'] ?> • <?= $req['date'] ?></p>
-                    </div>
-                    <div class="flex gap-1">
-                        <button class="w-8 h-8 rounded-full bg-green-50 text-green-600 hover:bg-green-500 hover:text-white transition flex items-center justify-center shadow-sm">
-                            <i class="fas fa-check text-xs"></i>
-                        </button>
-                        <button class="w-8 h-8 rounded-full bg-red-50 text-red-600 hover:bg-red-500 hover:text-white transition flex items-center justify-center shadow-sm">
-                            <i class="fas fa-times text-xs"></i>
-                        </button>
-                    </div>
-                </div>
-                <?php endforeach; ?>
+            <?php if($approvals['tasks']>0): ?><span class="bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-full"><?= $approvals['tasks'] ?></span><?php endif; ?>
+        </a>
+        <a href="<?= BASEURL ?>/admin/approvals" class="bg-white p-4 rounded-xl border border-gray-100 shadow-sm hover:border-orange-300 transition flex items-center justify-between group">
+            <div class="flex items-center gap-3">
+                <div class="p-2 bg-orange-50 text-orange-600 rounded-lg group-hover:bg-orange-600 group-hover:text-white transition"><i class="ri-mail-send-fill"></i></div>
+                <span class="text-sm font-bold text-gray-700">Request Cuti/Ijin</span>
             </div>
-            <button class="w-full mt-4 py-2 text-xs font-bold text-indigo-600 bg-indigo-50 rounded-lg hover:bg-indigo-100 transition">
-                Lihat Semua Request
-            </button>
-        </div>
-
-        <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 fade-in-up delay-300">
-            <h3 class="font-bold text-gray-800 mb-4">Sebaran Divisi</h3>
-            <div class="relative h-48">
-                <canvas id="deptChart"></canvas>
-                <div class="absolute inset-0 flex items-center justify-center flex-col pointer-events-none">
-                    <span class="text-3xl font-bold text-gray-800">22</span>
-                    <span class="text-xs text-gray-400 uppercase">Total Staff</span>
-                </div>
+            <?php if($approvals['requests']>0): ?><span class="bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-full"><?= $approvals['requests'] ?></span><?php endif; ?>
+        </a>
+        <a href="<?= BASEURL ?>/admin/attendance?tab=approval" class="bg-white p-4 rounded-xl border border-gray-100 shadow-sm hover:border-blue-300 transition flex items-center justify-between group">
+            <div class="flex items-center gap-3">
+                <div class="p-2 bg-blue-50 text-blue-600 rounded-lg group-hover:bg-blue-600 group-hover:text-white transition"><i class="ri-time-fill"></i></div>
+                <span class="text-sm font-bold text-gray-700">Koreksi Absensi</span>
             </div>
-        </div>
-
-        <div class="bg-gradient-to-br from-slate-800 to-slate-900 p-6 rounded-2xl text-white shadow-lg fade-in-up delay-300">
-            <h3 class="font-bold text-lg mb-4 flex items-center gap-2">
-                <i class="fas fa-broadcast-tower text-indigo-400"></i> Informasi Pusat
-            </h3>
-            <div class="space-y-4 max-h-48 overflow-y-auto custom-scroll pr-2">
-                <?php foreach($updates as $info): ?>
-                <div class="relative pl-4 border-l-2 <?= $info['color'] == 'red' ? 'border-red-500' : 'border-blue-500' ?>">
-                    <h5 class="text-sm font-bold text-gray-200"><?= $info['title'] ?></h5>
-                    <p class="text-xs text-gray-400 mt-0.5"><?= $info['desc'] ?></p>
-                    <span class="text-[10px] text-gray-500 block mt-1"><?= $info['time'] ?></span>
-                </div>
-                <?php endforeach; ?>
-            </div>
-        </div>
-
+            <?php if($approvals['attendance']>0): ?><span class="bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-full"><?= $approvals['attendance'] ?></span><?php endif; ?>
+        </a>
     </div>
+</div>
 
+<div class="mb-8">
+    <h3 class="font-bold text-gray-800 text-lg mb-4">Quick Access</h3>
+    <div class="flex gap-3 overflow-x-auto pb-2">
+        <a href="<?= BASEURL ?>/admin/employees/create" class="flex-shrink-0 bg-white border border-gray-200 px-4 py-3 rounded-xl hover:bg-slate-50 transition text-sm font-bold text-gray-600 flex items-center gap-2">
+            <i class="ri-user-add-line text-lg text-blue-500"></i> Add Employee
+        </a>
+        <a href="<?= BASEURL ?>/admin/announcements/create" class="flex-shrink-0 bg-white border border-gray-200 px-4 py-3 rounded-xl hover:bg-slate-50 transition text-sm font-bold text-gray-600 flex items-center gap-2">
+            <i class="ri-megaphone-line text-lg text-purple-500"></i> Buat Pengumuman
+        </a>
+        <a href="<?= BASEURL ?>/admin/reports" class="flex-shrink-0 bg-white border border-gray-200 px-4 py-3 rounded-xl hover:bg-slate-50 transition text-sm font-bold text-gray-600 flex items-center gap-2">
+            <i class="ri-file-chart-line text-lg text-emerald-500"></i> Lihat Laporan
+        </a>
+        <a href="<?= BASEURL ?>/admin/settings" class="flex-shrink-0 bg-white border border-gray-200 px-4 py-3 rounded-xl hover:bg-slate-50 transition text-sm font-bold text-gray-600 flex items-center gap-2">
+            <i class="ri-settings-line text-lg text-slate-500"></i> Pengaturan
+        </a>
+    </div>
 </div>
 
 <script>
-    // 1. Line Chart: Absensi Mingguan
-    const ctxAttendance = document.getElementById('attendanceChart').getContext('2d');
-    new Chart(ctxAttendance, {
+    // 1. Line Chart
+    new Chart(document.getElementById('attendanceChart'), {
         type: 'line',
         data: {
-            labels: ['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min'],
+            labels: <?= json_encode($chart_attendance['labels']) ?>,
             datasets: [{
-                label: 'Hadir',
-                data: [18, 20, 19, 21, 18, 15, 0],
-                borderColor: '#4F46E5', // Indigo 600
-                backgroundColor: 'rgba(79, 70, 229, 0.1)',
-                borderWidth: 3,
-                tension: 0.4, // Kurva smooth
-                fill: true,
-                pointBackgroundColor: '#fff',
-                pointBorderColor: '#4F46E5',
-                pointRadius: 4
+                label: 'Hadir', data: <?= json_encode($chart_attendance['present']) ?>,
+                borderColor: '#4F46E5', backgroundColor: 'rgba(79, 70, 229, 0.1)', borderWidth: 2, fill: true, tension: 0.4, pointRadius: 0
             }, {
-                label: 'Terlambat',
-                data: [2, 1, 3, 0, 2, 5, 0],
-                borderColor: '#F97316', // Orange 500
-                backgroundColor: 'transparent',
-                borderWidth: 2,
-                borderDash: [5, 5],
-                tension: 0.4,
-                pointRadius: 0
+                label: 'Telat', data: <?= json_encode($chart_attendance['late']) ?>,
+                borderColor: '#F97316', backgroundColor: 'transparent', borderWidth: 2, borderDash: [4, 4], tension: 0.4, pointRadius: 0
             }]
         },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: { position: 'top', align: 'end', labels: { usePointStyle: true, boxWidth: 8 } }
-            },
-            scales: {
-                y: { beginAtZero: true, grid: { borderDash: [2, 4], color: '#f3f4f6' } },
-                x: { grid: { display: false } }
-            }
-        }
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { grid: { display: false } }, y: { display: false } } }
     });
 
-    // 2. Doughnut Chart: Departemen
-    const ctxDept = document.getElementById('deptChart').getContext('2d');
-    new Chart(ctxDept, {
+    // 2. Task Chart
+    new Chart(document.getElementById('taskChart'), {
         type: 'doughnut',
         data: {
-            labels: ['Marketing', 'Keuangan', 'Teknisi', 'HRGA'],
+            labels: ['Selesai', 'Proses', 'Pending'],
             datasets: [{
-                data: [8, 5, 6, 3],
-                backgroundColor: [
-                    '#3B82F6', // Blue
-                    '#10B981', // Emerald
-                    '#F59E0B', // Amber
-                    '#EC4899'  // Pink
-                ],
-                borderWidth: 0,
-                hoverOffset: 4
+                data: <?= json_encode($chart_tasks) ?>,
+                backgroundColor: ['#22c55e', '#3b82f6', '#d1d5db'], borderWidth: 0, cutout: '75%'
             }]
         },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            cutout: '75%', // Lubang tengah besar
-            plugins: {
-                legend: { display: false } // Sembunyikan legend default
-            }
-        }
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+    });
+
+    // 3. Age Chart
+    new Chart(document.getElementById('ageChart'), {
+        type: 'doughnut',
+        data: {
+            labels: <?= json_encode($chart_age['labels']) ?>,
+            datasets: [{
+                data: <?= json_encode(array_values($chart_age['data'])) ?>,
+                backgroundColor: ['#6366F1', '#8B5CF6', '#EC4899', '#F43F5E'], borderWidth: 0, cutout: '65%'
+            }]
+        },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
     });
 </script>

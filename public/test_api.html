@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test API Login AbsenPWA</title>
+    <style>
+        body { font-family: monospace; padding: 20px; max-width: 600px; margin: 0 auto; }
+        .input-group { margin-bottom: 10px; }
+        input { padding: 8px; width: 100%; box-sizing: border-box; }
+        button { padding: 10px 20px; background: #2563EB; color: white; border: none; cursor: pointer; width: 100%; }
+        button:hover { background: #1D4ED8; }
+        #result { background: #f3f4f6; padding: 15px; border: 1px solid #ddd; margin-top: 20px; white-space: pre-wrap; min-height: 100px; }
+        .success { color: green; font-weight: bold; }
+        .error { color: red; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+    <h2>👮 Uji Coba Gerbang Login API</h2>
+    
+    <div class="input-group">
+        <label>Username (NIK)</label>
+        <input type="text" id="username" value="A-10.001"> 
+    </div>
+
+    <div class="input-group">
+        <label>Password</label>
+        <input type="password" id="password" placeholder="Masukkan password user ini">
+    </div>
+
+    <button onclick="testLogin()">TEMBAK API 🚀</button>
+
+    <h3>Hasil Response JSON:</h3>
+    <div id="result">Belum ada request...</div>
+
+    <script>
+        async function testLogin() {
+            const user = document.getElementById('username').value;
+            const pass = document.getElementById('password').value;
+            const resultBox = document.getElementById('result');
+
+            resultBox.innerText = "Loading... Sedang menghubungi Server...";
+
+            try {
+                // INI SCRIPT UTAMA YANG NANTI DIPAKAI DI APK
+                const response = await fetch('api/auth/login.php', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        username: user,
+                        password: pass
+                    })
+                });
+
+                const data = await response.json();
+
+                // Tampilkan JSON biar kebaca mata manusia
+                resultBox.innerHTML = JSON.stringify(data, null, 4);
+
+                // Cek status visual
+                if (data.status === 'success') {
+                    resultBox.style.border = "2px solid green";
+                    resultBox.innerHTML += `\n\n<span class="success">✅ SUKSES! Token & Role User berhasil diambil.</span>`;
+                } else {
+                    resultBox.style.border = "2px solid red";
+                    resultBox.innerHTML += `\n\n<span class="error">❌ GAGAL: ${data.message}</span>`;
+                }
+
+            } catch (error) {
+                resultBox.style.border = "2px solid red";
+                resultBox.innerText = "ERROR KONEKSI:\n" + error;
+                console.error('Error:', error);
+            }
+        }
+    </script>
+</body>
+</html>

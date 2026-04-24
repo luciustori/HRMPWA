@@ -3,163 +3,94 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?= $title ?? 'Login' ?></title>
+    <title>Login - HRIS PRO</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        /* Hilangkan spinner pada input number */
-        input[type=number]::-webkit-inner-spin-button, 
-        input[type=number]::-webkit-outer-spin-button { 
-            -webkit-appearance: none; 
-            margin: 0; 
-        }
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background: #F8FAFC; }
     </style>
 </head>
-<body class="bg-gray-50 h-screen flex items-center justify-center font-sans">
+<body class="h-screen flex items-center justify-center p-4">
 
-    <div class="bg-white p-10 rounded-3xl shadow-2xl w-full max-w-md border border-gray-100">
+    <div class="max-w-md w-full bg-white rounded-2xl shadow-xl border border-slate-100 overflow-hidden">
         
-        <div class="text-center mb-10">
-            <div class="inline-flex items-center justify-center w-20 h-20 bg-indigo-50 rounded-full mb-6 text-indigo-600">
-                <i class="fas fa-fingerprint text-4xl"></i>
-            </div>
-            <h1 class="text-3xl font-extrabold text-gray-800 tracking-tight">AbsenPWA</h1>
-            <p class="text-sm text-gray-500 mt-2">Silakan login untuk melanjutkan</p>
+        <div class="bg-slate-900 p-8 text-center">
+            <div class="inline-flex items-center justify-center w-12 h-12 bg-white/10 rounded-xl mb-4 text-white font-bold text-2xl">H</div>
+            <h1 class="text-white text-2xl font-bold tracking-tight">HRIS <span class="text-blue-500">PRO</span></h1>
+            <p class="text-slate-400 text-sm mt-2">Masuk untuk mengelola perusahaan.</p>
         </div>
 
-        <?php if (isset($_SESSION['flash_error'])): ?>
-            <div class="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-xl mb-6 text-sm text-center shadow-sm">
-                <i class="fas fa-circle-exclamation mr-2"></i>
-                <?= $_SESSION['flash_error']; unset($_SESSION['flash_error']); ?>
-            </div>
-        <?php endif; ?>
-
-        <form action="<?= BASEURL ?>/auth/login" method="POST" class="space-y-6" id="loginForm">
+        <div class="p-8">
             
-            <div>
-                <label class="block text-sm font-bold text-gray-700 mb-4 text-center">Nomor Induk (NIK)</label>
-                
-                <input type="hidden" name="username" id="full_nik">
-
-                <div class="flex items-center justify-center gap-2">
-                    <input type="text" maxlength="1" class="nik-input w-12 h-14 text-center text-2xl font-bold border-2 border-gray-300 rounded-lg focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100 outline-none uppercase transition-all text-indigo-600" data-index="0" placeholder="T">
-                    
-                    <span class="text-2xl font-bold text-indigo-400 select-none">-</span>
-                    
-                    <input type="text" inputmode="numeric" maxlength="1" class="nik-input w-12 h-14 text-center text-2xl font-bold border-2 border-gray-300 rounded-lg focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100 outline-none transition-all text-gray-700" data-index="1" placeholder="2">
-                    <input type="text" inputmode="numeric" maxlength="1" class="nik-input w-12 h-14 text-center text-2xl font-bold border-2 border-gray-300 rounded-lg focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100 outline-none transition-all text-gray-700" data-index="2" placeholder="0">
-                    
-                    <span class="text-2xl font-bold text-indigo-400 select-none">.</span>
-
-                    <input type="text" inputmode="numeric" maxlength="1" class="nik-input w-12 h-14 text-center text-2xl font-bold border-2 border-gray-300 rounded-lg focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100 outline-none transition-all text-gray-700" data-index="3" placeholder="0">
-                    <input type="text" inputmode="numeric" maxlength="1" class="nik-input w-12 h-14 text-center text-2xl font-bold border-2 border-gray-300 rounded-lg focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100 outline-none transition-all text-gray-700" data-index="4" placeholder="0">
-                    <input type="text" inputmode="numeric" maxlength="1" class="nik-input w-12 h-14 text-center text-2xl font-bold border-2 border-gray-300 rounded-lg focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100 outline-none transition-all text-gray-700" data-index="5" placeholder="1">
+            <?php if (isset($_SESSION['flash'])) : ?>
+                <div class="bg-red-50 text-red-600 px-4 py-3 rounded-lg text-sm font-medium mb-6 flex items-center gap-2">
+                    <?= $_SESSION['flash']['message']; unset($_SESSION['flash']); ?>
                 </div>
-            </div>
+            <?php endif; ?>
 
-            <div>
-                <label class="block text-sm font-bold text-gray-700 mb-2">Password</label>
-                <div class="relative">
-                    <span class="absolute inset-y-0 left-0 flex items-center pl-4 text-gray-400">
-                        <i class="fas fa-lock"></i>
-                    </span>
-                    <input type="password" name="password" required placeholder="••••••••"
-                           class="w-full pl-11 pr-4 py-3.5 rounded-xl border border-gray-300 focus:outline-none focus:ring-4 focus:ring-indigo-100 focus:border-indigo-500 transition font-medium text-gray-700">
+            <form action="<?= BASEURL; ?>/Admin/LoginController/login" method="post">
+                <div class="mb-5">
+                    <label class="block text-slate-600 text-sm font-bold mb-2">Username</label>
+                    <input type="text" name="username" autocomplete="username" class="w-full px-4 py-3 rounded-lg bg-slate-50 border border-slate-200 focus:border-blue-500 focus:bg-white focus:outline-none transition-all font-medium text-slate-800" placeholder="X-10.001" required>
                 </div>
-            </div>
 
-            <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-4 rounded-xl shadow-lg shadow-indigo-200 hover:shadow-xl transition-all duration-200 transform hover:-translate-y-0.5 text-lg">
-                Masuk Sistem
-            </button>
+                <div class="mb-8">
+                    <label class="block text-slate-600 text-sm font-bold mb-2">Password</label>
+                    <input type="password" name="password" autocomplete="current-password" class="w-full px-4 py-3 rounded-lg bg-slate-50 border border-slate-200 focus:border-blue-500 focus:bg-white focus:outline-none transition-all font-medium text-slate-800" placeholder="••••••••" required>
+                </div>
 
-        </form>
+                <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3.5 rounded-xl transition-all transform active:scale-95 shadow-lg shadow-blue-600/30">
+                    Masuk Sekarang
+                </button>
+            </form>
+        </div>
         
-        <p class="text-center text-xs text-gray-400 mt-10">
-            &copy; <?= date('Y') ?> PT Sketz Indonesia. All rights reserved.
-        </p>
+        <div class="bg-slate-50 p-4 text-center border-t border-slate-100">
+            <p class="text-xs text-slate-400 font-medium">&copy; <?= date('Y') ?> PT Jogjatama Vishesha - XT Square</p>
+        </div>
+
     </div>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Tangkap elemen input username
+    const usernameInput = document.querySelector('input[name="username"]');
 
-    <script>
-        const inputs = document.querySelectorAll('.nik-input');
-        const hiddenInput = document.getElementById('full_nik');
+    if (usernameInput) {
+        // Set batas maksimal karakter ke 8 (contoh: A-10.001)
+        usernameInput.setAttribute('maxlength', '8');
 
-        inputs.forEach((input, index) => {
-            // 1. Handle Input Character
-            input.addEventListener('input', (e) => {
-                const value = e.target.value;
-                
-                // Validasi: Input pertama harus Huruf, sisanya Angka
-                if (index === 0) {
-                    // Force Uppercase untuk huruf depan
-                    e.target.value = value.replace(/[^a-zA-Z]/g, '').toUpperCase();
-                } else {
-                    // Force Number untuk kotak lainnya
-                    e.target.value = value.replace(/[^0-9]/g, '');
-                }
+        usernameInput.addEventListener('input', function(e) {
+            // Hapus semua karakter aneh, sisakan huruf dan angka saja
+            let val = this.value.replace(/[^a-zA-Z0-9]/g, '');
 
-                // Auto Focus ke kotak selanjutnya jika sudah terisi
-                if (e.target.value.length === 1 && index < inputs.length - 1) {
-                    inputs[index + 1].focus();
-                }
+            if (val.length > 0) {
+                // 1. Karakter pertama wajib huruf kapital
+                let formatted = val.charAt(0).toUpperCase();
 
-                updateHiddenValue();
-            });
+                // 2. Tambahkan strip (-) setelah huruf pertama
+                if (val.length > 1) {
+                    // Ambil maksimal 2 digit angka setelah huruf
+                    let numbers1 = val.substring(1, 3).replace(/[^0-9]/g, '');
+                    formatted += '-' + numbers1;
 
-            // 2. Handle Backspace (Pindah ke belakang)
-            input.addEventListener('keydown', (e) => {
-                if (e.key === 'Backspace' && e.target.value === '' && index > 0) {
-                    inputs[index - 1].focus();
-                }
-            });
-
-            // 3. Handle Paste (Jika user copas "T20001")
-            input.addEventListener('paste', (e) => {
-                e.preventDefault();
-                const pasteData = (e.clipboardData || window.clipboardData).getData('text').toUpperCase().replace(/[^A-Z0-9]/g, ''); // Ambil hanya alphanum
-                
-                if (!pasteData) return;
-
-                // Loop untuk mengisi kotak
-                let dataIndex = 0;
-                for (let i = 0; i < inputs.length; i++) {
-                    if (dataIndex < pasteData.length) {
-                        inputs[i].value = pasteData[dataIndex];
-                        // Validasi ulang tipe data per kotak saat paste
-                        if(i === 0) inputs[i].value = inputs[i].value.replace(/[^A-Z]/, '');
-                        else inputs[i].value = inputs[i].value.replace(/[^0-9]/, '');
-                        
-                        dataIndex++;
+                    // 3. Tambahkan titik (.) setelah 2 angka pertama
+                    if (val.length > 3) {
+                        // Ambil sisa angkanya (maksimal 3 digit)
+                        let numbers2 = val.substring(3, 6).replace(/[^0-9]/g, '');
+                        if (numbers2.length > 0) {
+                            formatted += '.' + numbers2;
+                        }
                     }
                 }
-                updateHiddenValue();
-                // Focus ke kotak terakhir yang terisi
-                const lastFilled = Math.min(pasteData.length - 1, inputs.length - 1);
-                inputs[lastFilled >= 0 ? lastFilled : 0].focus();
-            });
+                
+                // Terapkan format yang udah dirapikan ke dalam input
+                this.value = formatted;
+            } else {
+                this.value = '';
+            }
         });
-
-        // Fungsi Menggabungkan Nilai ke Hidden Input
-        function updateHiddenValue() {
-            let fullNik = '';
-            // Format: H-YY.XXX
-            // Index 0 (Huruf)
-            fullNik += inputs[0].value;
-            
-            // Tambah "-" jika Huruf dan Tahun pertama ada
-            if (inputs[0].value && inputs[1].value) fullNik += '-';
-            
-            // Index 1-2 (Tahun)
-            fullNik += inputs[1].value + inputs[2].value;
-            
-            // Tambah "." jika Tahun kedua dan Nomor pertama ada
-            if (inputs[2].value && inputs[3].value) fullNik += '.';
-            
-            // Index 3-5 (Nomor Urut)
-            fullNik += inputs[3].value + inputs[4].value + inputs[5].value;
-
-            hiddenInput.value = fullNik; // Nilai ini yang dikirim: "T-20.001"
-            console.log("Submit Value:", hiddenInput.value); 
-        }
-    </script>
+    }
+});
+</script>
 </body>
 </html>

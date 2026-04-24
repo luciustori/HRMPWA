@@ -18,12 +18,12 @@
                     
                     <div>
                         <label class="block text-sm font-bold text-gray-700 mb-2">Nama Kantor</label>
-                        <input type="text" name="office_name" value="<?= $office['office_name'] ?>" required class="w-full rounded-lg border-gray-300 focus:ring-indigo-500 shadow-sm">
+                        <input type="text" name="office_name" value="<?= $office['office_name'] ?>" required class="w-full px-3 py-2 border rounded-lg border-slate-300 focus:ring-2 focus:ring-purple-500">
                     </div>
 
                     <div>
                         <label class="block text-sm font-bold text-gray-700 mb-2">Perusahaan</label>
-                        <select name="company_id" class="w-full rounded-lg border-gray-300 focus:ring-indigo-500 shadow-sm">
+                        <select name="company_id" class="w-full px-3 py-2 border rounded-lg border-slate-300 focus:ring-2 focus:ring-purple-500">
                             <?php foreach($companies as $comp): ?>
                                 <option value="<?= $comp['id'] ?>" <?= $comp['id'] == $office['company_id'] ? 'selected' : '' ?>>
                                     <?= $comp['company_name'] ?>
@@ -35,22 +35,22 @@
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div>
                             <label class="block text-sm font-bold text-gray-700 mb-2">Latitude</label>
-                            <input type="text" name="latitude" value="<?= $office['latitude'] ?>" required class="w-full rounded-lg border-gray-300 focus:ring-indigo-500 shadow-sm font-mono">
+                            <input type="text" name="latitude" value="<?= $office['latitude'] ?>" required class="w-full px-3 py-2 border rounded-lg border-slate-300 focus:ring-2 focus:ring-purple-500 font-mono">
                         </div>
                         <div>
                             <label class="block text-sm font-bold text-gray-700 mb-2">Longitude</label>
-                            <input type="text" name="longitude" value="<?= $office['longitude'] ?>" required class="w-full rounded-lg border-gray-300 focus:ring-indigo-500 shadow-sm font-mono">
+                            <input type="text" name="longitude" value="<?= $office['longitude'] ?>" required class="w-full px-3 py-2 border rounded-lg border-slate-300 focus:ring-2 focus:ring-purple-500 font-mono">
                         </div>
                     </div>
 
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div>
                             <label class="block text-sm font-bold text-gray-700 mb-2">Radius (Meter)</label>
-                            <input type="number" name="radius_meters" value="<?= $office['radius_meters'] ?>" required class="w-full rounded-lg border-gray-300 focus:ring-indigo-500 shadow-sm">
+                            <input type="number" name="radius_meters" value="<?= $office['radius_meters'] ?>" required class="w-full px-3 py-2 border rounded-lg border-slate-300 focus:ring-2 focus:ring-purple-50- font-mono">
                         </div>
                         <div>
                             <label class="block text-sm font-bold text-gray-700 mb-2">Status</label>
-                            <select name="is_active" class="w-full rounded-lg border-gray-300 font-bold text-gray-700">
+                            <select name="is_active" class="w-full px-3 py-2 border rounded-lg border-slate-300 focus:ring-2 focus:ring-purple-500">
                                 <option value="1" <?= $office['is_active'] == 1 ? 'selected' : '' ?>>Aktif</option>
                                 <option value="0" <?= $office['is_active'] == 0 ? 'selected' : '' ?>>Non-Aktif</option>
                             </select>
@@ -59,7 +59,7 @@
 
                     <div>
                         <label class="block text-sm font-bold text-gray-700 mb-2">Alamat</label>
-                        <textarea name="address" rows="3" class="w-full rounded-lg border-gray-300 shadow-sm"><?= $office['address'] ?></textarea>
+                        <textarea name="address" rows="3" class="w-full px-3 py-2 border rounded-lg border-slate-300 focus:ring-2 focus:ring-purple-500"><?= $office['address'] ?></textarea>
                     </div>
 
                     <div class="pt-4 border-t flex justify-end gap-3">

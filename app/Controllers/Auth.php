@@ -10,7 +10,7 @@ class Auth extends Controller {
         }
         
         $data = ['title' => 'Login - AbsenPWA'];
-        $this->view('admin/auth/login', $data); // Tampilkan halaman login tanpa layout admin
+        $this->view('admin/auth/login', $data);
     }
 
     public function login() {
@@ -21,7 +21,7 @@ class Auth extends Controller {
             $db = new Database;
             
             // 1. Cari User berdasarkan Username (NIK) & harus Aktif
-            $db->query("SELECT u.*, e.first_name, e.last_name, e.employee_number, e.department_id 
+            $db->query("SELECT u.*, e.first_name, e.last_name 
                         FROM users u
                         JOIN employees e ON u.employee_id = e.id
                         WHERE u.username = :user AND u.is_active = 1");
@@ -32,19 +32,18 @@ class Auth extends Controller {
             // 2. Verifikasi Password
             if ($user && password_verify($password, $user['password'])) {
                 
-                // 3. Set Session
+                // 3. Set Session Penting
                 $_SESSION['user_id'] = $user['id'];
                 $_SESSION['employee_id'] = $user['employee_id'];
-                $_SESSION['user_role'] = $user['role'];
+                $_SESSION['user_role'] = trim($user['role']); // Simpan role yang sudah bersih dari spasi
                 $_SESSION['full_name'] = $user['first_name'] . ' ' . $user['last_name'];
-                $_SESSION['employee_number'] = $user['employee_number'];
                 
-                // 4. Redirect Cerdas
+                // 4. Redirect berdasarkan role
                 $this->redirectBasedOnRole();
                 
             } else {
                 // Login Gagal
-                $_SESSION['flash_error'] = "Username atau Password salah!";
+                Flasher::setFlash('Username atau Password salah!', 'danger');
                 header('Location: ' . BASEURL . '/auth');
                 exit;
             }
@@ -52,6 +51,7 @@ class Auth extends Controller {
     }
 
     public function logout() {
+        session_unset();
         session_destroy();
         header('Location: ' . BASEURL . '/auth');
         exit;
@@ -59,15 +59,13 @@ class Auth extends Controller {
 
     // Helper: Tentukan tujuan redirect
     private function redirectBasedOnRole() {
-        $role = $_SESSION['user_role'];
+        // AMBIL DARI SESSION (Fix Undefined Variable $user)
+        $role = $_SESSION['user_role'] ?? '';
 
-        if ($role == 'super_admin' || $role == 'admin') {
-            // Level Manajemen -> Masuk Dashboard Admin
+        if ($role === 'super_admin' || $role === 'admin') {
             header('Location: ' . BASEURL . '/admin/dashboard');
         } else {
-            // Level Staff -> Masuk PWA (Nanti kita buat controllernya)
-            // Untuk sementara kita arahkan ke profil karyawan atau halaman 'coming soon'
-            header('Location: ' . BASEURL . '/pwa/home'); 
+            header('Location: ' . BASEURL . '/staff/dashboard');
         }
         exit;
     }

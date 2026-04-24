@@ -1,0 +1,114 @@
+/* public/assets/css/admin-style.css */
+
+/* --- CORE RESET --- */
+body {
+    background-color: #F8FAFC;
+    overflow-x: hidden;
+}
+
+/* --- SIDEBAR WRAPPER --- */
+.sidebar-wrapper {
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 100vh;
+    background-color: #FFFFFF;
+    z-index: 50;
+    border-right: none;
+    box-shadow: 4px 0 24px -4px rgba(0, 0, 0, 0.04);
+    transition: width 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+/* --- SCROLLBAR LOGIC (Show on Hover Only) --- */
+/* Target elemen navigasi di dalam sidebar */
+.sidebar-nav-scroll {
+    overflow-y: hidden; /* Default: Scrollbar hilang */
+    overflow-x: hidden;
+    height: 100%;
+    /* Tetap bisa scroll pake wheel mouse meski hidden */
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* IE */
+}
+
+/* Saat mouse di atas sidebar, munculkan scrollbar */
+.sidebar-wrapper:hover .sidebar-nav-scroll {
+    overflow-y: auto;
+}
+
+/* Styling Scrollbar biar cantik (Chrome/Safari) */
+.sidebar-nav-scroll::-webkit-scrollbar {
+    width: 5px;
+}
+.sidebar-nav-scroll::-webkit-scrollbar-track {
+    background: transparent;
+}
+.sidebar-nav-scroll::-webkit-scrollbar-thumb {
+    background-color: #CBD5E1; /* Slate-300 */
+    border-radius: 20px;
+}
+.sidebar-nav-scroll::-webkit-scrollbar-thumb:hover {
+    background-color: #94A3B8; /* Slate-400 */
+}
+
+/* --- STATES --- */
+.sidebar-expanded { width: 280px; }
+.sidebar-collapsed { width: 88px; }
+
+/* --- MAIN CONTENT --- */
+.main-content-wrapper {
+    min-height: 100vh;
+    transition: margin-left 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.content-expanded { margin-left: 280px; }
+.content-collapsed { margin-left: 88px; }
+
+/* --- TOOLTIP FIX (Z-Index & Positioning) --- */
+.sidebar-tooltip {
+    /* Gunakan FIXED agar tidak terpotong oleh overflow:hidden sidebar */
+    position: fixed; 
+    left: 78px; /* Sedikit di dalam sidebar collapsed (nanti digeser transform) */
+    margin-top: -18px; /* Center vertical manual adjustment */
+    
+    background-color: #1E293B; /* Slate 800 */
+    color: white;
+    padding: 6px 12px;
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: 600;
+    white-space: nowrap;
+    
+    /* Awalnya sembunyi */
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    
+    /* Animasi */
+    transition: opacity 0.2s, transform 0.2s;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    z-index: 9999; /* Paling atas! */
+}
+
+/* Panah kecil tooltip */
+.sidebar-tooltip::before {
+    content: '';
+    position: absolute;
+    left: -4px;
+    top: 50%;
+    transform: translateY(-50%);
+    border-width: 4px 4px 4px 0;
+    border-color: transparent #1E293B transparent transparent;
+}
+
+/* Logic Munculin Tooltip (Hanya saat Sidebar Collapsed) */
+.sidebar-collapsed .group:hover .sidebar-tooltip {
+    opacity: 1;
+    visibility: visible;
+    /* Geser ke kanan biar pas di sebelah icon */
+    transform: translateX(18px); 
+}
+
+/* HIDE ELEMENTS SAAT COLLAPSED */
+.sidebar-collapsed .menu-text { display: none; opacity: 0; }
+.sidebar-collapsed .section-label { display: none; opacity: 0; }
+.sidebar-collapsed .logo-text { display: none; opacity: 0; }
+.sidebar-collapsed .logo-wrapper { justify-content: center; padding-left: 0; }

@@ -1,0 +1,946 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard HRM - Comprehensive Human Resources Management</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        [x-cloak] { display: none !important; }
+        
+        .sidebar {
+            transition: width 0.3s ease;
+            width: 280px;
+        }
+        
+        .sidebar.collapsed {
+            width: 80px;
+        }
+        
+        .sidebar-text {
+            opacity: 1;
+            transition: opacity 0.2s;
+        }
+        
+        .sidebar.collapsed .sidebar-text {
+            opacity: 0;
+            display: none;
+        }
+        
+        .gradient-blue { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+        .gradient-green { background: linear-gradient(135deg, #0ea5e9 0%, #06b6d4 100%); }
+        .gradient-orange { background: linear-gradient(135deg, #f97316 0%, #fb923c 100%); }
+        .gradient-purple { background: linear-gradient(135deg, #8b5cf6 0%, #a78bfa 100%); }
+        .gradient-pink { background: linear-gradient(135deg, #ec4899 0%, #f472b6 100%); }
+        .gradient-yellow { background: linear-gradient(135deg, #eab308 0%, #fbbf24 100%); }
+        
+        .card {
+            transition: all 0.3s ease;
+        }
+        
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+        }
+        
+        .stat-card {
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 100px;
+            height: 100px;
+            opacity: 0.1;
+            transform: translate(30%, -30%);
+        }
+        
+        .notification-badge {
+            position: absolute;
+            top: -5px;
+            right: -5px;
+            background: #ef4444;
+            color: white;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            font-size: 11px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+        }
+        
+        .progress-ring {
+            transform: rotate(-90deg);
+        }
+        
+        .calendar-day {
+            aspect-ratio: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .calendar-day:hover {
+            background: #f3f4f6;
+        }
+        
+        .calendar-day.today {
+            background: #3b82f6;
+            color: white;
+            font-weight: bold;
+        }
+        
+        .calendar-day.has-event {
+            position: relative;
+        }
+        
+        .calendar-day.has-event::after {
+            content: '';
+            position: absolute;
+            bottom: 2px;
+            width: 4px;
+            height: 4px;
+            background: #ef4444;
+            border-radius: 50%;
+        }
+        
+        .task-item {
+            transition: all 0.2s;
+        }
+        
+        .task-item:hover {
+            background: #f9fafb;
+        }
+        
+        @keyframes slideIn {
+            from {
+                transform: translateX(-100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+        
+        .animate-slide-in {
+            animation: slideIn 0.3s ease-out;
+        }
+    </style>
+</head>
+<body class="bg-gray-50" x-data="hrmDashboard()" x-init="init()">
+    
+    <div class="flex h-screen overflow-hidden">
+        
+        <aside class="sidebar bg-gradient-to-b from-gray-900 to-gray-800 text-white flex-shrink-0" :class="{ 'collapsed': sidebarCollapsed }">
+            <div class="flex flex-col h-full">
+                
+                <div class="flex items-center justify-between p-6 border-b border-gray-700">
+                    <div class="flex items-center">
+                        <div class="w-10 h-10 bg-blue-500 rounded-lg flex items-center justify-center font-bold text-xl">
+                            HR
+                        </div>
+                        <span class="ml-3 text-xl font-bold sidebar-text">HRM System</span>
+                    </div>
+                    <button @click="sidebarCollapsed = !sidebarCollapsed" class="text-gray-400 hover:text-white">
+                        <i class="fas fa-bars"></i>
+                    </button>
+                </div>
+
+                <nav class="flex-1 overflow-y-auto py-6 px-4">
+                    <template x-for="item in menuItems" :key="item.id">
+                        <div class="mb-2">
+                            <button @click="changeMenu(item.id)" 
+                                    :class="activeMenu === item.id ? 'bg-blue-600 text-white' : 'text-gray-300 hover:bg-gray-700'"
+                                    class="w-full flex items-center px-4 py-3 rounded-lg transition">
+                                <i :class="item.icon" class="text-xl w-6"></i>
+                                <span class="ml-3 sidebar-text" x-text="item.label"></span>
+                                <span x-show="item.badge && !sidebarCollapsed" class="ml-auto bg-red-500 text-white text-xs px-2 py-1 rounded-full sidebar-text" x-text="item.badge"></span>
+                            </button>
+                        </div>
+                    </template>
+                </nav>
+
+                <div class="p-4 border-t border-gray-700">
+                    <div class="flex items-center">
+                        <div class="w-10 h-10 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 flex items-center justify-center text-white font-bold">
+                            AR
+                        </div>
+                        <div class="ml-3 sidebar-text">
+                            <p class="text-sm font-semibold">Ahmad Rizki</p>
+                            <p class="text-xs text-gray-400">HR Manager</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <div class="flex-1 flex flex-col overflow-hidden">
+            
+            <header class="bg-white border-b border-gray-200 shadow-sm">
+                <div class="flex items-center justify-between px-8 py-4">
+                    <div>
+                        <h1 class="text-2xl font-bold text-gray-900">HR Management Dashboard</h1>
+                        <p class="text-sm text-gray-500 mt-1">
+                            <i class="far fa-calendar mr-2"></i>
+                            <span x-text="currentDate"></span>
+                        </p>
+                    </div>
+
+                    <div class="flex items-center space-x-4">
+                        <select x-model="selectedPeriod" @change="updateCharts()" class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white">
+                            <option value="month">Bulan Ini</option>
+                            <option value="quarter">Kuartal Ini</option>
+                            <option value="year">Tahun Ini</option>
+                        </select>
+
+                        <button class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition flex items-center">
+                            <i class="fas fa-plus mr-2"></i>
+                            Quick Action
+                        </button>
+
+                        <button class="relative p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg">
+                            <i class="fas fa-bell text-xl"></i>
+                            <span class="notification-badge">5</span>
+                        </button>
+
+                        <button class="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg">
+                            <i class="fas fa-cog text-xl"></i>
+                        </button>
+                    </div>
+                </div>
+            </header>
+
+            <main class="flex-1 overflow-y-auto p-8">
+                
+                <div x-show="activeMenu === 'dashboard'" class="space-y-8">
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                        <template x-for="metric in keyMetrics" :key="metric.title">
+                            <div class="stat-card card bg-white rounded-xl shadow-md p-6" :class="metric.gradient">
+                                <div class="flex items-center justify-between mb-4">
+                                    <div :class="'w-12 h-12 rounded-lg flex items-center justify-center ' + metric.iconBg">
+                                        <i :class="metric.icon + ' text-2xl text-white'"></i>
+                                    </div>
+                                    <div class="text-right">
+                                        <p class="text-3xl font-bold text-gray-900" x-text="metric.value"></p>
+                                        <p class="text-sm text-gray-600 mt-1" x-text="metric.title"></p>
+                                    </div>
+                                </div>
+                                <div class="flex items-center justify-between text-sm">
+                                    <span :class="metric.trend >= 0 ? 'text-green-600' : 'text-red-600'" class="flex items-center">
+                                        <i :class="metric.trend >= 0 ? 'fas fa-arrow-up' : 'fas fa-arrow-down'" class="mr-1"></i>
+                                        <span x-text="Math.abs(metric.trend) + '%'"></span>
+                                    </span>
+                                    <span class="text-gray-500" x-text="metric.period"></span>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        
+                        <div class="lg:col-span-2 bg-white rounded-xl shadow-md p-6">
+                            <div class="flex items-center justify-between mb-6">
+                                <h3 class="text-lg font-semibold text-gray-900">Employee Distribution by Department</h3>
+                                <select class="px-3 py-1 border border-gray-300 rounded-lg text-sm">
+                                    <option>2026</option>
+                                    <option>2025</option>
+                                </select>
+                            </div>
+                            <div style="height: 280px; position: relative;">
+                                <canvas id="departmentChart"></canvas>
+                            </div>
+                        </div>
+
+                        <div class="bg-white rounded-xl shadow-md p-6">
+                            <h3 class="text-lg font-semibold text-gray-900 mb-6">Attendance Overview</h3>
+                            <div class="space-y-4">
+                                <template x-for="attend in attendanceData" :key="attend.status">
+                                    <div>
+                                        <div class="flex justify-between items-center mb-2">
+                                            <span class="text-sm text-gray-600" x-text="attend.status"></span>
+                                            <span class="text-sm font-semibold text-gray-900" x-text="attend.count + ' (' + attend.percentage + '%)'"></span>
+                                        </div>
+                                        <div class="w-full bg-gray-200 rounded-full h-2">
+                                            <div :class="attend.color" class="h-2 rounded-full transition-all" :style="`width: ${attend.percentage}%`"></div>
+                                        </div>
+                                    </div>
+                                </template>
+                            </div>
+                            
+                            <div class="mt-6 pt-6 border-t border-gray-200">
+                                <div class="flex justify-between items-center">
+                                    <span class="text-sm text-gray-600">Overall Rate</span>
+                                    <span class="text-2xl font-bold text-green-600">96.8%</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        
+                        <div class="bg-white rounded-xl shadow-md p-6">
+                            <h3 class="text-lg font-semibold text-gray-900 mb-6">Recruitment Pipeline</h3>
+                            <div style="height: 250px; position: relative;">
+                                <canvas id="recruitmentChart"></canvas>
+                            </div>
+                        </div>
+
+                        <div class="bg-white rounded-xl shadow-md p-6">
+                            <h3 class="text-lg font-semibold text-gray-900 mb-6">Performance Rating Distribution</h3>
+                            <div style="height: 250px; position: relative;">
+                                <canvas id="performanceChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        
+                        <div class="bg-white rounded-xl shadow-md p-6">
+                            <div class="flex items-center justify-between mb-6">
+                                <h3 class="text-lg font-semibold text-gray-900">Recent Activities</h3>
+                                <button class="text-blue-600 hover:text-blue-700 text-sm font-semibold">View All</button>
+                            </div>
+                            <div class="space-y-4 max-h-80 overflow-y-auto">
+                                <template x-for="activity in recentActivities" :key="activity.id">
+                                    <div class="flex items-start space-x-3 pb-4 border-b border-gray-100 last:border-0">
+                                        <div :class="activity.iconBg" class="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0">
+                                            <i :class="activity.icon + ' text-white'"></i>
+                                        </div>
+                                        <div class="flex-1 min-w-0">
+                                            <p class="text-sm text-gray-900 font-medium" x-text="activity.title"></p>
+                                            <p class="text-xs text-gray-500 mt-1" x-text="activity.description"></p>
+                                            <p class="text-xs text-gray-400 mt-1" x-text="activity.time"></p>
+                                        </div>
+                                    </div>
+                                </template>
+                            </div>
+                        </div>
+
+                        <div class="bg-white rounded-xl shadow-md p-6">
+                            <div class="flex items-center justify-between mb-4">
+                                <h3 class="text-lg font-semibold text-gray-900">Calendar</h3>
+                                <div class="flex space-x-2">
+                                    <button class="text-gray-400 hover:text-gray-600">
+                                        <i class="fas fa-chevron-left"></i>
+                                    </button>
+                                    <button class="text-gray-400 hover:text-gray-600">
+                                        <i class="fas fa-chevron-right"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <p class="text-sm text-gray-600 mb-4" x-text="calendarMonth"></p>
+                            
+                            <div class="grid grid-cols-7 gap-2 text-center mb-2">
+                                <template x-for="day in ['S', 'M', 'T', 'W', 'T', 'F', 'S']">
+                                    <div class="text-xs font-semibold text-gray-500" x-text="day"></div>
+                                </template>
+                            </div>
+                            
+                            <div class="grid grid-cols-7 gap-2">
+                                <template x-for="day in calendarDays" :key="day">
+                                    <div class="calendar-day text-sm" :class="{ 'today': day === 7, 'has-event': [7, 12, 18, 25].includes(day) }" x-text="day > 0 ? day : ''"></div>
+                                </template>
+                            </div>
+
+                            <div class="mt-6 space-y-2">
+                                <template x-for="event in upcomingEvents.slice(0, 3)" :key="event.id">
+                                    <div class="flex items-center space-x-3 p-2 bg-blue-50 rounded-lg">
+                                        <div class="w-2 h-2 rounded-full" :class="event.color"></div>
+                                        <div class="flex-1 min-w-0">
+                                            <p class="text-xs font-semibold text-gray-900 truncate" x-text="event.title"></p>
+                                            <p class="text-xs text-gray-500" x-text="event.date"></p>
+                                        </div>
+                                    </div>
+                                </template>
+                            </div>
+                        </div>
+
+                        <div class="bg-white rounded-xl shadow-md p-6">
+                            <div class="flex items-center justify-between mb-6">
+                                <h3 class="text-lg font-semibold text-gray-900">Priority Tasks</h3>
+                                <button class="text-blue-600 hover:text-blue-700 text-sm font-semibold">
+                                    <i class="fas fa-plus mr-1"></i>Add
+                                </button>
+                            </div>
+                            <div class="space-y-3 max-h-80 overflow-y-auto">
+                                <template x-for="task in priorityTasks" :key="task.id">
+                                    <div class="task-item flex items-start space-x-3 p-3 rounded-lg border border-gray-200">
+                                        <input type="checkbox" :checked="task.completed" class="mt-1 rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+                                        <div class="flex-1 min-w-0">
+                                            <p class="text-sm font-medium text-gray-900" :class="{ 'line-through text-gray-400': task.completed }" x-text="task.title"></p>
+                                            <div class="flex items-center space-x-2 mt-1">
+                                                <span :class="task.priorityClass" class="text-xs px-2 py-1 rounded-full" x-text="task.priority"></span>
+                                                <span class="text-xs text-gray-500" x-text="task.due"></span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </template>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-white rounded-xl shadow-md p-6">
+                        <h3 class="text-lg font-semibold text-gray-900 mb-6">Quick Access - HR Modules</h3>
+                        <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+                            <template x-for="module in hrModules" :key="module.id">
+                                <button @click="changeMenu(module.id)" class="flex flex-col items-center justify-center p-4 rounded-lg hover:bg-gray-50 transition group">
+                                    <div :class="module.iconBg" class="w-14 h-14 rounded-lg flex items-center justify-center mb-3 group-hover:scale-110 transition">
+                                        <i :class="module.icon + ' text-2xl text-white'"></i>
+                                    </div>
+                                    <span class="text-sm font-medium text-gray-700 text-center" x-text="module.label"></span>
+                                    <span x-show="module.count" class="text-xs text-gray-500 mt-1" x-text="module.count"></span>
+                                </button>
+                            </template>
+                        </div>
+                    </div>
+                </div>
+
+                <div x-show="activeMenu === 'employees'" class="space-y-6">
+                    <div class="bg-white rounded-xl shadow-md p-6">
+                        <div class="flex items-center justify-between mb-6">
+                            <h2 class="text-2xl font-bold text-gray-900">Employee Management</h2>
+                            <button class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">
+                                <i class="fas fa-user-plus mr-2"></i>Add Employee
+                            </button>
+                        </div>
+
+                        <div class="flex flex-wrap gap-4 mb-6">
+                            <div class="flex-1 min-w-64">
+                                <input type="text" placeholder="Search employees..." class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                            </div>
+                            <select class="px-4 py-2 border border-gray-300 rounded-lg">
+                                <option>All Departments</option>
+                                <option>Engineering</option>
+                                <option>Sales</option>
+                                <option>Marketing</option>
+                            </select>
+                            <select class="px-4 py-2 border border-gray-300 rounded-lg">
+                                <option>All Status</option>
+                                <option>Active</option>
+                                <option>On Leave</option>
+                            </select>
+                        </div>
+
+                        <div class="overflow-x-auto">
+                            <table class="w-full">
+                                <thead class="bg-gray-50 border-b">
+                                    <tr>
+                                        <th class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Employee</th>
+                                        <th class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Position</th>
+                                        <th class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Department</th>
+                                        <th class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Status</th>
+                                        <th class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Join Date</th>
+                                        <th class="px-6 py-3 text-center text-xs font-semibold text-gray-600 uppercase">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-gray-200">
+                                    <template x-for="emp in employees.slice(0, 10)" :key="emp.id">
+                                        <tr class="hover:bg-gray-50">
+                                            <td class="px-6 py-4">
+                                                <div class="flex items-center">
+                                                    <div class="w-10 h-10 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 flex items-center justify-center text-white font-semibold">
+                                                        <span x-text="emp.name.split(' ').map(n => n[0]).join('').substring(0,2)"></span>
+                                                    </div>
+                                                    <div class="ml-3">
+                                                        <p class="text-sm font-semibold text-gray-900" x-text="emp.name"></p>
+                                                        <p class="text-xs text-gray-500" x-text="emp.email"></p>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td class="px-6 py-4 text-sm text-gray-700" x-text="emp.position"></td>
+                                            <td class="px-6 py-4 text-sm text-gray-700" x-text="emp.department"></td>
+                                            <td class="px-6 py-4">
+                                                <span :class="emp.statusClass" class="px-3 py-1 rounded-full text-xs font-semibold" x-text="emp.status"></span>
+                                            </td>
+                                            <td class="px-6 py-4 text-sm text-gray-700" x-text="emp.joinDate"></td>
+                                            <td class="px-6 py-4 text-center">
+                                                <button class="text-blue-600 hover:text-blue-700 mx-1">
+                                                    <i class="fas fa-eye"></i>
+                                                </button>
+                                                <button class="text-green-600 hover:text-green-700 mx-1">
+                                                    <i class="fas fa-edit"></i>
+                                                </button>
+                                                <button class="text-red-600 hover:text-red-700 mx-1">
+                                                    <i class="fas fa-trash"></i>
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    </template>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <div class="flex items-center justify-between mt-6 pt-6 border-t">
+                            <p class="text-sm text-gray-600">Showing 1 to 10 of 485 employees</p>
+                            <div class="flex space-x-2">
+                                <button class="px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">Previous</button>
+                                <button class="px-3 py-2 bg-blue-600 text-white rounded-lg">1</button>
+                                <button class="px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">2</button>
+                                <button class="px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">3</button>
+                                <button class="px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">Next</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div x-show="activeMenu === 'recruitment'" class="space-y-6">
+                    <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+                        <template x-for="stage in recruitmentStages" :key="stage.name">
+                            <div class="bg-white rounded-xl shadow-md p-6 card">
+                                <div class="flex items-center justify-between mb-4">
+                                    <h3 class="font-semibold text-gray-900" x-text="stage.name"></h3>
+                                    <span class="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm font-semibold" x-text="stage.count"></span>
+                                </div>
+                                <div class="space-y-3">
+                                    <template x-for="candidate in stage.candidates" :key="candidate.id">
+                                        <div class="p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition cursor-pointer">
+                                            <p class="text-sm font-medium text-gray-900" x-text="candidate.name"></p>
+                                            <p class="text-xs text-gray-500 mt-1" x-text="candidate.position"></p>
+                                            <div class="flex items-center justify-between mt-2">
+                                                <span class="text-xs text-gray-400" x-text="candidate.date"></span>
+                                                <span :class="candidate.scoreClass" class="text-xs px-2 py-1 rounded" x-text="candidate.score"></span>
+                                            </div>
+                                        </div>
+                                    </template>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+
+                <div x-show="activeMenu === 'attendance'" class="space-y-6">
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        <div class="lg:col-span-2 bg-white rounded-xl shadow-md p-6">
+                            <h3 class="text-lg font-semibold text-gray-900 mb-6">Daily Attendance</h3>
+                            <div style="height: 300px; position: relative;">
+                                <canvas id="attendanceTrendChart"></canvas>
+                            </div>
+                        </div>
+                        <div class="bg-white rounded-xl shadow-md p-6">
+                            <h3 class="text-lg font-semibold text-gray-900 mb-6">Leave Requests</h3>
+                            <div class="space-y-3">
+                                <template x-for="leave in leaveRequests" :key="leave.id">
+                                    <div class="p-4 border border-gray-200 rounded-lg hover:shadow-md transition">
+                                        <div class="flex items-start justify-between mb-2">
+                                            <div>
+                                                <p class="text-sm font-semibold text-gray-900" x-text="leave.employee"></p>
+                                                <p class="text-xs text-gray-500" x-text="leave.type"></p>
+                                            </div>
+                                            <span :class="leave.statusClass" class="text-xs px-2 py-1 rounded-full font-semibold" x-text="leave.status"></span>
+                                        </div>
+                                        <p class="text-xs text-gray-600 mb-3" x-text="leave.dates"></p>
+                                        <div class="flex space-x-2">
+                                            <button class="flex-1 px-3 py-1 bg-green-600 text-white rounded text-xs hover:bg-green-700">Approve</button>
+                                            <button class="flex-1 px-3 py-1 bg-red-600 text-white rounded text-xs hover:bg-red-700">Reject</button>
+                                        </div>
+                                    </div>
+                                </template>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div x-show="activeMenu === 'payroll'" class="space-y-6">
+                    <div class="bg-white rounded-xl shadow-md p-6">
+                        <h2 class="text-2xl font-bold text-gray-900 mb-6">Payroll Management</h2>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                            <div class="p-6 bg-gradient-to-r from-green-500 to-emerald-500 rounded-xl text-white">
+                                <p class="text-sm opacity-90">Total Payroll</p>
+                                <p class="text-3xl font-bold mt-2">Rp 5.2M</p>
+                                <p class="text-sm mt-2 opacity-75">Februari 2026</p>
+                            </div>
+                            <div class="p-6 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-xl text-white">
+                                <p class="text-sm opacity-90">Processed</p>
+                                <p class="text-3xl font-bold mt-2">468/485</p>
+                                <p class="text-sm mt-2 opacity-75">96.5% Complete</p>
+                            </div>
+                            <div class="p-6 bg-gradient-to-r from-purple-500 to-pink-500 rounded-xl text-white">
+                                <p class="text-sm opacity-90">Pending</p>
+                                <p class="text-3xl font-bold mt-2">17</p>
+                                <p class="text-sm mt-2 opacity-75">Awaiting Approval</p>
+                            </div>
+                        </div>
+                        <div style="height: 300px; position: relative;">
+                            <canvas id="payrollChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <div x-show="activeMenu === 'performance'" class="space-y-6">
+                    <div class="bg-white rounded-xl shadow-md p-6">
+                        <h2 class="text-2xl font-bold text-gray-900 mb-6">Performance Management</h2>
+                        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                            <div>
+                                <h3 class="text-lg font-semibold text-gray-900 mb-4">Top Performers</h3>
+                                <div class="space-y-3">
+                                    <template x-for="(performer, index) in topPerformers" :key="index">
+                                        <div class="flex items-center space-x-4 p-4 bg-gray-50 rounded-lg">
+                                            <div class="w-10 h-10 rounded-full bg-gradient-to-r from-yellow-400 to-orange-500 flex items-center justify-center text-white font-bold" x-text="index + 1"></div>
+                                            <div class="flex-1">
+                                                <p class="font-semibold text-gray-900" x-text="performer.name"></p>
+                                                <p class="text-sm text-gray-500" x-text="performer.department"></p>
+                                            </div>
+                                            <div class="text-right">
+                                                <p class="text-lg font-bold text-green-600" x-text="performer.score"></p>
+                                                <p class="text-xs text-gray-500">Score</p>
+                                            </div>
+                                        </div>
+                                    </template>
+                                </div>
+                            </div>
+                            <div>
+                                <h3 class="text-lg font-semibold text-gray-900 mb-4">Review Schedule</h3>
+                                <div class="space-y-3">
+                                    <template x-for="review in reviewSchedule" :key="review.id">
+                                        <div class="p-4 border border-gray-200 rounded-lg">
+                                            <div class="flex items-center justify-between mb-2">
+                                                <p class="font-semibold text-gray-900" x-text="review.employee"></p>
+                                                <span class="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded" x-text="review.type"></span>
+                                            </div>
+                                            <p class="text-sm text-gray-600 mb-2" x-text="review.reviewer"></p>
+                                            <div class="flex items-center justify-between">
+                                                <span class="text-xs text-gray-500">
+                                                    <i class="far fa-calendar mr-1"></i>
+                                                    <span x-text="review.date"></span>
+                                                </span>
+                                                <button class="text-xs text-blue-600 hover:text-blue-700 font-semibold">View Details</button>
+                                            </div>
+                                        </div>
+                                    </template>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div x-show="activeMenu === 'training'" class="space-y-6">
+                    <div class="bg-white rounded-xl shadow-md p-6">
+                        <div class="flex items-center justify-between mb-6">
+                            <h2 class="text-2xl font-bold text-gray-900">Training & Development</h2>
+                            <button class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">
+                                <i class="fas fa-plus mr-2"></i>Create Training
+                            </button>
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                            <template x-for="training in trainingPrograms" :key="training.id">
+                                <div class="border border-gray-200 rounded-xl p-6 hover:shadow-lg transition">
+                                    <div class="flex items-center justify-between mb-4">
+                                        <span :class="training.statusClass" class="text-xs px-3 py-1 rounded-full font-semibold" x-text="training.status"></span>
+                                        <i :class="training.icon + ' text-2xl text-blue-600'"></i>
+                                    </div>
+                                    <h3 class="font-semibold text-gray-900 mb-2" x-text="training.title"></h3>
+                                    <p class="text-sm text-gray-600 mb-4" x-text="training.description"></p>
+                                    <div class="space-y-2 text-sm text-gray-500">
+                                        <div class="flex items-center">
+                                            <i class="far fa-calendar w-5"></i>
+                                            <span x-text="training.date"></span>
+                                        </div>
+                                        <div class="flex items-center">
+                                            <i class="fas fa-users w-5"></i>
+                                            <span x-text="training.participants + ' participants'"></span>
+                                        </div>
+                                        <div class="flex items-center">
+                                            <i class="far fa-clock w-5"></i>
+                                            <span x-text="training.duration"></span>
+                                        </div>
+                                    </div>
+                                    <button class="mt-4 w-full px-4 py-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition text-sm font-semibold">
+                                        View Details
+                                    </button>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+                </div>
+
+            </main>
+        </div>
+    </div>
+
+    <script>
+        function hrmDashboard() {
+            return {
+                sidebarCollapsed: false,
+                activeMenu: 'dashboard',
+                selectedPeriod: 'month',
+                currentDate: 'Sabtu, 7 Februari 2026',
+                calendarMonth: 'Februari 2026',
+                calendarDays: Array.from({length: 35}, (_, i) => i - 5),
+                
+                // Variable untuk menyimpan instance chart
+                charts: {},
+
+                // Semua data asli
+                menuItems: [
+                    { id: 'dashboard', label: 'Dashboard', icon: 'fas fa-home', badge: null },
+                    { id: 'employees', label: 'Employees', icon: 'fas fa-users', badge: '485' },
+                    { id: 'recruitment', label: 'Recruitment', icon: 'fas fa-user-plus', badge: '24' },
+                    { id: 'attendance', label: 'Attendance', icon: 'fas fa-calendar-check', badge: '8' },
+                    { id: 'payroll', label: 'Payroll', icon: 'fas fa-money-bill-wave', badge: '17' },
+                    { id: 'performance', label: 'Performance', icon: 'fas fa-chart-line', badge: null },
+                    { id: 'training', label: 'Training', icon: 'fas fa-graduation-cap', badge: '5' },
+                    { id: 'benefits', label: 'Benefits', icon: 'fas fa-gift', badge: null },
+                    { id: 'reports', label: 'Reports', icon: 'fas fa-file-alt', badge: null }
+                ],
+
+                keyMetrics: [
+                    { title: 'Total Employees', value: '485', trend: 3.2, period: 'vs last month', icon: 'fas fa-users', iconBg: 'bg-blue-500' },
+                    { title: 'Open Positions', value: '12', trend: -15, period: 'vs last month', icon: 'fas fa-briefcase', iconBg: 'bg-green-500' },
+                    { title: 'Turnover Rate', value: '8.5%', trend: -2.3, period: 'vs last quarter', icon: 'fas fa-user-minus', iconBg: 'bg-orange-500' },
+                    { title: 'Avg Performance', value: '4.2', trend: 5.5, period: 'vs last quarter', icon: 'fas fa-star', iconBg: 'bg-purple-500' }
+                ],
+
+                attendanceData: [
+                    { status: 'Present', count: 468, percentage: 96.5, color: 'bg-green-500' },
+                    { status: 'On Leave', count: 12, percentage: 2.5, color: 'bg-blue-500' },
+                    { status: 'Sick', count: 3, percentage: 0.6, color: 'bg-yellow-500' },
+                    { status: 'Absent', count: 2, percentage: 0.4, color: 'bg-red-500' }
+                ],
+
+                recentActivities: [
+                    { id: 1, title: 'New Employee Onboarded', description: 'Sarah Johnson joined as Marketing Manager', time: '10 minutes ago', icon: 'fas fa-user-plus', iconBg: 'bg-green-500' },
+                    { id: 2, title: 'Leave Request Approved', description: 'Annual leave for Budi Santoso (5 days)', time: '25 minutes ago', icon: 'fas fa-check-circle', iconBg: 'bg-blue-500' },
+                    { id: 3, title: 'Performance Review Completed', description: 'Q4 review for Engineering Team completed', time: '1 hour ago', icon: 'fas fa-star', iconBg: 'bg-purple-500' },
+                    { id: 4, title: 'Training Session Scheduled', description: 'Leadership Workshop on Feb 15', time: '2 hours ago', icon: 'fas fa-graduation-cap', iconBg: 'bg-orange-500' },
+                    { id: 5, title: 'Payroll Processed', description: 'January payroll completed for 485 employees', time: '3 hours ago', icon: 'fas fa-money-bill-wave', iconBg: 'bg-green-500' }
+                ],
+
+                upcomingEvents: [
+                    { id: 1, title: 'Interview: Senior Developer', date: 'Feb 7, 14:00', color: 'bg-blue-500' },
+                    { id: 2, title: 'Performance Review Meeting', date: 'Feb 12, 10:00', color: 'bg-purple-500' },
+                    { id: 3, title: 'Training: Leadership Skills', date: 'Feb 18, 09:00', color: 'bg-orange-500' },
+                    { id: 4, title: 'Town Hall Meeting', date: 'Feb 25, 15:00', color: 'bg-green-500' }
+                ],
+
+                priorityTasks: [
+                    { id: 1, title: 'Review leave requests (8 pending)', priority: 'High', priorityClass: 'bg-red-100 text-red-800', due: 'Today', completed: false },
+                    { id: 2, title: 'Complete payroll processing', priority: 'High', priorityClass: 'bg-red-100 text-red-800', due: 'Feb 10', completed: false },
+                    { id: 3, title: 'Schedule Q1 performance reviews', priority: 'Medium', priorityClass: 'bg-yellow-100 text-yellow-800', due: 'Feb 15', completed: false },
+                    { id: 4, title: 'Update employee handbook', priority: 'Low', priorityClass: 'bg-blue-100 text-blue-800', due: 'Feb 28', completed: true },
+                    { id: 5, title: 'Approve training budget', priority: 'Medium', priorityClass: 'bg-yellow-100 text-yellow-800', due: 'Feb 12', completed: false }
+                ],
+
+                hrModules: [
+                    { id: 'employees', label: 'Employees', icon: 'fas fa-users', iconBg: 'bg-blue-500', count: '485' },
+                    { id: 'recruitment', label: 'Recruitment', icon: 'fas fa-user-plus', iconBg: 'bg-green-500', count: '24 open' },
+                    { id: 'attendance', label: 'Attendance', icon: 'fas fa-calendar-check', iconBg: 'bg-purple-500', count: '96.5%' },
+                    { id: 'payroll', label: 'Payroll', icon: 'fas fa-money-bill-wave', iconBg: 'bg-emerald-500', count: 'Rp 5.2M' },
+                    { id: 'performance', label: 'Performance', icon: 'fas fa-chart-line', iconBg: 'bg-orange-500', count: '4.2 avg' },
+                    { id: 'training', label: 'Training', icon: 'fas fa-graduation-cap', iconBg: 'bg-indigo-500', count: '5 active' }
+                ],
+
+                employees: [
+                    { id: 1, name: 'Budi Santoso', email: 'budi@company.com', position: 'Senior Engineer', department: 'Engineering', status: 'Active', statusClass: 'bg-green-100 text-green-800', joinDate: '15 Mar 2021' },
+                    { id: 2, name: 'Siti Nurhaliza', email: 'siti@company.com', position: 'Marketing Manager', department: 'Marketing', status: 'Active', statusClass: 'bg-green-100 text-green-800', joinDate: '10 Jan 2022' },
+                    { id: 3, name: 'Ahmad Wijaya', email: 'ahmad@company.com', position: 'Sales Director', department: 'Sales', status: 'Active', statusClass: 'bg-green-100 text-green-800', joinDate: '05 Jun 2020' },
+                    { id: 4, name: 'Rina Kartika', email: 'rina@company.com', position: 'HR Specialist', department: 'HR', status: 'On Leave', statusClass: 'bg-yellow-100 text-yellow-800', joinDate: '20 Aug 2021' },
+                    { id: 5, name: 'Dedi Kusuma', email: 'dedi@company.com', position: 'Product Manager', department: 'Product', status: 'Active', statusClass: 'bg-green-100 text-green-800', joinDate: '12 Feb 2023' },
+                    { id: 6, name: 'Maya Putri', email: 'maya@company.com', position: 'Finance Manager', department: 'Finance', status: 'Active', statusClass: 'bg-green-100 text-green-800', joinDate: '18 Nov 2021' },
+                    { id: 7, name: 'Riko Pratama', email: 'riko@company.com', position: 'UX Designer', department: 'Design', status: 'Active', statusClass: 'bg-green-100 text-green-800', joinDate: '25 Sep 2022' },
+                    { id: 8, name: 'Linda Susanti', email: 'linda@company.com', position: 'Customer Success', department: 'Support', status: 'Active', statusClass: 'bg-green-100 text-green-800', joinDate: '07 Apr 2023' },
+                    { id: 9, name: 'Andi Firmansyah', email: 'andi@company.com', position: 'DevOps Engineer', department: 'Engineering', status: 'Active', statusClass: 'bg-green-100 text-green-800', joinDate: '14 Jul 2022' },
+                    { id: 10, name: 'Dewi Lestari', email: 'dewi@company.com', position: 'Content Writer', department: 'Marketing', status: 'Active', statusClass: 'bg-green-100 text-green-800', joinDate: '30 Jan 2024' }
+                ],
+
+                recruitmentStages: [
+                    {
+                        name: 'New Applications',
+                        count: 8,
+                        candidates: [
+                            { id: 1, name: 'John Doe', position: 'Software Engineer', date: 'Today', score: '85%', scoreClass: 'bg-green-100 text-green-800' },
+                            { id: 2, name: 'Jane Smith', position: 'Product Designer', date: 'Yesterday', score: '92%', scoreClass: 'bg-green-100 text-green-800' }
+                        ]
+                    },
+                    {
+                        name: 'Phone Screening',
+                        count: 5,
+                        candidates: [
+                            { id: 3, name: 'Mike Johnson', position: 'Marketing Manager', date: '2 days ago', score: '78%', scoreClass: 'bg-blue-100 text-blue-800' },
+                            { id: 4, name: 'Sarah Williams', position: 'Data Analyst', date: '3 days ago', score: '88%', scoreClass: 'bg-green-100 text-green-800' }
+                        ]
+                    },
+                    {
+                        name: 'Technical Interview',
+                        count: 6,
+                        candidates: [
+                            { id: 5, name: 'David Brown', position: 'Backend Developer', date: '1 week ago', score: '90%', scoreClass: 'bg-green-100 text-green-800' },
+                            { id: 6, name: 'Emily Davis', position: 'Frontend Developer', date: '1 week ago', score: '82%', scoreClass: 'bg-blue-100 text-blue-800' }
+                        ]
+                    },
+                    {
+                        name: 'Final Round',
+                        count: 5,
+                        candidates: [
+                            { id: 7, name: 'Robert Wilson', position: 'Tech Lead', date: '2 weeks ago', score: '95%', scoreClass: 'bg-green-100 text-green-800' },
+                            { id: 8, name: 'Jessica Moore', position: 'UX Researcher', date: '2 weeks ago', score: '87%', scoreClass: 'bg-green-100 text-green-800' }
+                        ]
+                    }
+                ],
+
+                leaveRequests: [
+                    { id: 1, employee: 'Budi Santoso', type: 'Annual Leave', dates: 'Feb 10-14, 2026 (5 days)', status: 'Pending', statusClass: 'bg-yellow-100 text-yellow-800' },
+                    { id: 2, employee: 'Siti Nurhaliza', type: 'Sick Leave', dates: 'Feb 7, 2026 (1 day)', status: 'Pending', statusClass: 'bg-yellow-100 text-yellow-800' },
+                    { id: 3, employee: 'Ahmad Wijaya', type: 'Personal Leave', dates: 'Feb 20-21, 2026 (2 days)', status: 'Pending', statusClass: 'bg-yellow-100 text-yellow-800' },
+                    { id: 4, employee: 'Rina Kartika', type: 'Annual Leave', dates: 'Feb 15-19, 2026 (5 days)', status: 'Approved', statusClass: 'bg-green-100 text-green-800' }
+                ],
+
+                topPerformers: [
+                    { name: 'Andi Wijaya', department: 'Sales', score: '4.9/5' },
+                    { name: 'Budi Santoso', department: 'Engineering', score: '4.8/5' },
+                    { name: 'Siti Nurhaliza', department: 'Marketing', score: '4.7/5' },
+                    { name: 'Maya Putri', department: 'Finance', score: '4.6/5' },
+                    { name: 'Dedi Kusuma', department: 'Product', score: '4.5/5' }
+                ],
+
+                reviewSchedule: [
+                    { id: 1, employee: 'Budi Santoso', reviewer: 'Ahmad Rizki', type: 'Annual Review', date: 'Feb 10, 2026' },
+                    { id: 2, employee: 'Siti Nurhaliza', reviewer: 'Linda Manager', type: 'Quarterly Review', date: 'Feb 12, 2026' },
+                    { id: 3, employee: 'Rina Kartika', reviewer: 'Ahmad Rizki', type: 'Probation Review', date: 'Feb 15, 2026' },
+                    { id: 4, employee: 'Dedi Kusuma', reviewer: 'Product Director', type: 'Annual Review', date: 'Feb 18, 2026' }
+                ],
+
+                trainingPrograms: [
+                    { id: 1, title: 'Leadership Workshop', description: 'Develop leadership skills for managers', date: 'Feb 15, 2026', participants: 25, duration: '2 days', status: 'Upcoming', statusClass: 'bg-blue-100 text-blue-800', icon: 'fas fa-user-tie' },
+                    { id: 2, title: 'Technical Skills Bootcamp', description: 'Advanced programming techniques', date: 'Feb 20-24, 2026', participants: 40, duration: '5 days', status: 'Open', statusClass: 'bg-green-100 text-green-800', icon: 'fas fa-code' },
+                    { id: 3, title: 'Communication Excellence', description: 'Effective workplace communication', date: 'Mar 1, 2026', participants: 30, duration: '1 day', status: 'Open', statusClass: 'bg-green-100 text-green-800', icon: 'fas fa-comments' },
+                    { id: 4, title: 'Data Analytics Training', description: 'Data-driven decision making', date: 'Jan 25, 2026', participants: 22, duration: '3 days', status: 'Completed', statusClass: 'bg-gray-100 text-gray-800', icon: 'fas fa-chart-bar' },
+                    { id: 5, title: 'Customer Service Skills', description: 'Enhance customer satisfaction', date: 'Feb 8, 2026', participants: 18, duration: '1 day', status: 'Ongoing', statusClass: 'bg-purple-100 text-purple-800', icon: 'fas fa-headset' },
+                    { id: 6, title: 'Project Management', description: 'Agile & Scrum methodologies', date: 'Mar 10-12, 2026', participants: 35, duration: '3 days', status: 'Upcoming', statusClass: 'bg-blue-100 text-blue-800', icon: 'fas fa-tasks' }
+                ],
+
+                init() {
+                    // Gunakan timeout agar elemen canvas benar-benar siap di DOM
+                    setTimeout(() => {
+                        this.initCharts();
+                    }, 100);
+                },
+                
+                // Helper function untuk pindah menu dan refresh chart jika perlu
+                changeMenu(menuId) {
+                    this.activeMenu = menuId;
+                    this.$nextTick(() => {
+                         this.initCharts();
+                    });
+                },
+
+                updateCharts() {
+                    console.log('Updating charts for period:', this.selectedPeriod);
+                    this.initCharts();
+                },
+                
+                // Helper untuk membuat chart dengan aman
+                createChart(id, type, data, options = {}) {
+                    const ctx = document.getElementById(id);
+                    // Pastikan elemen canvas ada (karena x-show mungkin menyembunyikannya)
+                    if (!ctx) return; 
+
+                    // HAPUS CHART LAMA JIKA ADA
+                    if (this.charts[id]) {
+                        this.charts[id].destroy();
+                    }
+
+                    // Render chart baru
+                    this.charts[id] = new Chart(ctx, {
+                        type: type,
+                        data: data,
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            ...options
+                        }
+                    });
+                },
+
+                initCharts() {
+                    // 1. Department Chart
+                    this.createChart('departmentChart', 'bar', {
+                        labels: ['Engineering', 'Sales', 'Marketing', 'Finance', 'HR', 'Support', 'Product', 'Design'],
+                        datasets: [{
+                            label: 'Employees',
+                            data: [125, 85, 62, 45, 38, 52, 48, 30],
+                            backgroundColor: 'rgba(59, 130, 246, 0.8)',
+                            borderColor: 'rgba(59, 130, 246, 1)',
+                            borderWidth: 1
+                        }]
+                    }, {
+                        plugins: { legend: { display: false } },
+                        scales: { y: { beginAtZero: true } }
+                    });
+
+                    // 2. Recruitment Chart
+                    this.createChart('recruitmentChart', 'line', {
+                        labels: ['Applications', 'Screening', 'Phone Interview', 'Technical', 'Final', 'Offer'],
+                        datasets: [{
+                            label: 'Candidates',
+                            data: [150, 85, 52, 28, 18, 12],
+                            backgroundColor: 'rgba(34, 197, 94, 0.2)',
+                            borderColor: 'rgba(34, 197, 94, 1)',
+                            borderWidth: 2,
+                            fill: true,
+                            tension: 0.4
+                        }]
+                    }, {
+                        plugins: { legend: { display: false } }
+                    });
+
+                    // 3. Performance Chart
+                    this.createChart('performanceChart', 'doughnut', {
+                        labels: ['Excellent (A)', 'Good (B)', 'Average (C)', 'Needs Improvement (D)'],
+                        datasets: [{
+                            data: [22, 48, 25, 5],
+                            backgroundColor: [
+                                'rgba(34, 197, 94, 0.8)',
+                                'rgba(59, 130, 246, 0.8)',
+                                'rgba(251, 191, 36, 0.8)',
+                                'rgba(239, 68, 68, 0.8)'
+                            ]
+                        }]
+                    });
+
+                    // 4. Attendance Chart
+                    this.createChart('attendanceTrendChart', 'line', {
+                        labels: ['Week 1', 'Week 2', 'Week 3', 'Week 4'],
+                        datasets: [{
+                            label: 'Attendance Rate',
+                            data: [97.2, 96.8, 97.5, 96.5],
+                            borderColor: 'rgba(34, 197, 94, 1)',
+                            backgroundColor: 'rgba(34, 197, 94, 0.1)',
+                            borderWidth: 2,
+                            fill: true,
+                            tension: 0.4
+                        }]
+                    }, {
+                        scales: { y: { beginAtZero: false, min: 90, max: 100 } }
+                    });
+
+                    // 5. Payroll Chart
+                    this.createChart('payrollChart', 'bar', {
+                        labels: ['Aug', 'Sep', 'Oct', 'Nov', 'Dec', 'Jan', 'Feb'],
+                        datasets: [{
+                            label: 'Payroll Amount (Million Rp)',
+                            data: [4.8, 4.9, 5.1, 5.0, 5.3, 5.1, 5.2],
+                            backgroundColor: 'rgba(139, 92, 246, 0.8)',
+                            borderColor: 'rgba(139, 92, 246, 1)',
+                            borderWidth: 1
+                        }]
+                    });
+                }
+            }
+        }
+    </script>
+</body>
+</html>

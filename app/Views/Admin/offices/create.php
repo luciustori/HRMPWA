@@ -18,12 +18,12 @@
                     
                     <div>
                         <label class="block text-sm font-bold text-gray-700 mb-2">Nama Kantor / Cabang</label>
-                        <input type="text" name="office_name" placeholder="Contoh: Kantor Pusat, Pabrik A" required class="w-full rounded-lg border-gray-300 focus:ring-indigo-500 shadow-sm">
+                        <input type="text" name="office_name" placeholder="Contoh: Kantor Pusat, Pabrik A" required class="w-full px-3 py-2 border rounded-lg border-slate-300 focus:ring-2 focus:ring-purple-500">
                     </div>
 
                     <div>
                         <label class="block text-sm font-bold text-gray-700 mb-2">Perusahaan Induk</label>
-                        <select name="company_id" class="w-full rounded-lg border-gray-300 focus:ring-indigo-500 shadow-sm">
+                        <select name="company_id" class="w-full px-3 py-2 border rounded-lg border-slate-300 focus:ring-2 focus:ring-purple-500">
                             <?php foreach($companies as $comp): ?>
                                 <option value="<?= $comp['id'] ?>"><?= $comp['company_name'] ?></option>
                             <?php endforeach; ?>
@@ -33,23 +33,23 @@
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div>
                             <label class="block text-sm font-bold text-gray-700 mb-2">Latitude</label>
-                            <input type="text" name="latitude" placeholder="Contoh: -7.782..." required class="w-full rounded-lg border-gray-300 focus:ring-indigo-500 shadow-sm font-mono">
+                            <input type="text" name="latitude" placeholder="Contoh: -7.782..." required class="w-full px-3 py-2 border rounded-lg border-slate-300 focus:ring-2 focus:ring-purple-500 font-mono">
                         </div>
                         <div>
                             <label class="block text-sm font-bold text-gray-700 mb-2">Longitude</label>
-                            <input type="text" name="longitude" placeholder="Contoh: 110.36..." required class="w-full rounded-lg border-gray-300 focus:ring-indigo-500 shadow-sm font-mono">
+                            <input type="text" name="longitude" placeholder="Contoh: 110.36..." required class="w-full px-3 py-2 border rounded-lg border-slate-300 focus:ring-2 focus:ring-purple-500 font-mono">
                         </div>
                     </div>
 
                     <div>
                         <label class="block text-sm font-bold text-gray-700 mb-2">Radius Absensi (Meter)</label>
-                        <input type="number" name="radius_meters" value="100" required class="w-full rounded-lg border-gray-300 focus:ring-indigo-500 shadow-sm">
+                        <input type="number" name="radius_meters" value="100" required class="w-full px-3 py-2 border rounded-lg border-slate-300 focus:ring-2 focus:ring-purple-500">
                         <p class="text-xs text-gray-500 mt-1">Karyawan hanya bisa absen jika berada dalam jarak ini dari titik pusat.</p>
                     </div>
 
                     <div>
                         <label class="block text-sm font-bold text-gray-700 mb-2">Alamat Lengkap</label>
-                        <textarea name="address" rows="3" class="w-full rounded-lg border-gray-300 shadow-sm"></textarea>
+                        <textarea name="address" rows="3" class="w-full px-3 py-2 border rounded-lg border-slate-300 focus:ring-2 focus:ring-purple-500"></textarea>
                     </div>
 
                     <div class="pt-4 border-t flex justify-end">

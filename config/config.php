@@ -1,16 +1,20 @@
 <?php
 // File: config/config.php
 
-// Cek dulu apakah BASEURL sudah didefinisikan sebelumnya
 if (!defined('BASEURL')) {
-    // URL Bersih (Tanpa /public) -> Pastikan sesuai setting Laragon Anda
-    define('BASEURL', 'https://absenpwa.test');
+    // Sesuaikan URL ini saat pindah ke hosting
+    //define('BASEURL', 'https://hris.xtsquare.co.id');
+    define('BASEURL', 'https://absenpwa.test'); 
 }
 
-if (!defined('APP_NAME')) {
-    define('APP_NAME', 'AbsenPWA - HRM System');
-}
+define('APP_NAME', 'AbsenPWA - HRM System');
 
-if (!defined('APP_ROOT')) {
-    define('APP_ROOT', dirname(__DIR__) . '/app');
-}
+// Pengaturan Path Absolut (Penting untuk Linux/Hosting)
+define('APP_ROOT', dirname(__DIR__) . '/app');
+
+// Pengaturan Database Terpusat
+define('DB_HOST', 'localhost');
+define('DB_USER', 'root');      // Ganti dengan user DB hosting saat upload
+define('DB_PASS', '');          // Ganti dengan password DB hosting saat upload
+define('DB_NAME', 'mobile_db'); // Ganti dengan nama DB hosting saat upload
+

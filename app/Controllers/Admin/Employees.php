@@ -3,197 +3,306 @@
 
 class Employees extends Controller {
 
+    private $db;
+
     public function __construct() {
-        if (!isset($_SESSION['user_id']) || $_SESSION['user_role'] != 'admin') {
-            header('Location: ' . BASEURL . '/auth');
+        parent::__construct(); 
+
+        if (!session_id()) session_start();
+
+        // 1. CEK LOGIN
+        if (!isset($_SESSION['user_id'])) {
+            header('Location: ' . BASEURL . '/Admin/LoginController');
             exit;
         }
+
+        // 2. CEK ROLE
+        $role = strtolower($_SESSION['role'] ?? '');
+        if ($role !== 'admin' && $role !== 'super_admin') {
+            header('Location: ' . BASEURL . '/staff/dashboard');
+            exit;
+        }
+
+        $this->db = new Database;
     }
 
+    // --- INDEX: LIST KARYAWAN & STATS ---
     public function index() {
-        // ... (LOGIC INDEX TETAP SAMA, TIDAK PERLU DIUBAH) ...
-        // Agar file tidak kepanjangan, saya skip bagian index. 
-        // Pastikan method index() yang sudah fixed sebelumnya tetap ada.
-        $this->index_logic(); 
-    }
-    
-    private function index_logic() {
-         // Copy dari jawaban sebelumnya untuk index()
-         // Intinya query select join departments & users
-         // Logic statistik, simulasi gaji/kpi, sorting leaderboard
-         // Load view index
-         // (Jika Anda sudah punya index yang jalan, biarkan saja)
-         // Tapi karena saya harus kasih file lengkap, saya tulis ulang singkatnya di bawah:
-        $db = new Database;
-        $query = "SELECT e.*, d.department_name, u.username as account_username 
+        // 1. QUERY UTAMA
+        $query = "SELECT e.*, 
+                         d.department_name, 
+                         divi.division_name, 
+                         sg.grade_name, 
+                         sg.grade_code,
+                         u.username as account_username 
                   FROM employees e
-                  LEFT JOIN departments d ON e.department_id = d.id 
+                  LEFT JOIN departments d ON e.department_id = d.id
+                  LEFT JOIN divisions divi ON e.division_id = divi.id
+                  LEFT JOIN salary_grades sg ON e.salary_grade_id = sg.id
                   LEFT JOIN users u ON e.id = u.employee_id
                   ORDER BY e.first_name ASC";
-        $db->query($query);
-        $employees = $db->resultSet();
-        $stats = ['total' => count($employees), 'active' => 0, 'inactive' => 0];
-        foreach($employees as $k => $v) {
-             if($v['is_active']) $stats['active']++; else $stats['inactive']++;
-             $employees[$k]['has_account'] = !empty($v['account_username']);
-             // Simulasi visual score
-             $score = rand(70,99);
-             $employees[$k]['score'] = $score;
-             $employees[$k]['grade'] = $score >= 90 ? 'A' : 'B';
-             $employees[$k]['score_color'] = $score >= 90 ? 'bg-emerald-500' : 'bg-blue-500';
-             $employees[$k]['text_color'] = $score >= 90 ? 'text-emerald-600' : 'text-blue-600';
-        }
-        $data = ['title'=>'SDM', 'content_view'=>'admin/employees/index', 'employees'=>$employees, 'stats'=>$stats, 'top_performers'=>[]];
-        $this->view('admin/layouts/admin-layout', $data);
-    }
 
-    public function create() {
-        $db = new Database;
-        $db->query("SELECT * FROM departments");
+        $this->db->query($query);
+        $employees = $this->db->resultSet();
+
+        // 2. HITUNG STATISTIK (FIX Error Undefined Variable)
+        $stats = [
+            'total' => count($employees),
+            'active' => 0,
+            'inactive' => 0
+        ];
+
+        // Loop untuk hitung status & flag akun (FIX Error has_account)
+        foreach($employees as $k => $v) {
+             if($v['is_active'] == 1) {
+                 $stats['active']++; 
+             } else {
+                 $stats['inactive']++;
+             }
+             
+             // Flagging akun login untuk tampilan tabel
+             $employees[$k]['has_account'] = !empty($v['account_username']);
+        }
+
         $data = [
-            'title' => 'Tambah Karyawan',
-            'content_view' => 'admin/employees/create',
-            'departments' => $db->resultSet()
+            'title' => 'Direktori Karyawan', 
+            'content_view' => 'admin/employees/index', 
+            'employees' => $employees, 
+            'stats' => $stats // Kirim variabel stats ke view
         ];
         $this->view('admin/layouts/admin-layout', $data);
     }
 
-    // --- STORE LENGKAP (ALL FIELDS) ---
+    // --- HELPER AJAX DIVISI ---
+    public function get_divisions($dept_id) {
+        header('Content-Type: application/json');
+        $this->db->query("SELECT id, division_name FROM divisions WHERE department_id = :dept_id AND is_active = 1 ORDER BY division_name ASC");
+        $this->db->bind(':dept_id', $dept_id);
+        echo json_encode($this->db->resultSet());
+        exit;
+    }
+
+    // --- CREATE FORM ---
+    public function create() {
+        $this->db->query("SELECT * FROM departments WHERE is_active = 1 ORDER BY department_name ASC");
+        $departments = $this->db->resultSet();
+
+        $this->db->query("SELECT * FROM salary_grades ORDER BY id ASC");
+        $grades = $this->db->resultSet();
+
+        $data = [
+            'title' => 'Tambah Karyawan',
+            'content_view' => 'admin/employees/create',
+            'departments' => $departments,
+            'grades' => $grades
+        ];
+        $this->view('admin/layouts/admin-layout', $data);
+    }
+
+    // --- STORE PROSES ---
     public function store() {
         if ($_SERVER['REQUEST_METHOD'] == 'POST') {
-            $db = new Database;
-            
-            // Bersihkan Gaji
             $salary = preg_replace('/[^0-9]/', '', $_POST['salary'] ?? '0');
-
+            
             $query = "INSERT INTO employees (
-                        company_id, employee_number, first_name, last_name, 
-                        identity_number, gender, marital_status, number_of_dependents, date_of_birth,
-                        email, phone, address,
-                        department_id, position, employee_level, employee_status, hire_date, salary,
-                        bank_name, bank_account_number, bank_account_name, npwp,
-                        is_active
-                      ) VALUES (
-                        1, :nik, :fname, :lname,
-                        :ktp, :gender, :marital, :child, :dob,
-                        :email, :phone, :addr,
-                        :dept, :pos, :level, :status_emp, :hire, :salary,
-                        :bank, :rek, :rek_name, :npwp,
-                        :active
-                      )";
+                company_id, employee_number, first_name, last_name,
+                identity_number, gender, marital_status, number_of_dependents, date_of_birth,
+                email, phone, address,
+                department_id, division_id, position, employee_level, salary_grade_id, employee_status, hire_date, salary,
+                bank_name, bank_account_number, bank_account_name, npwp,
+                is_active
+            ) VALUES (
+                1, :nik, :fname, :lname,
+                :ktp, :gender, :marital, :child, :dob,
+                :email, :phone, :addr,
+                :dept, :division, :pos, :level, :grade, :status_emp, :hire, :salary,
+                :bank, :rek, :rek_name, :npwp,
+                :active
+            )";
             
-            $db->query($query);
-            // Tab 1: Identitas
-            $db->bind(':nik', $_POST['employee_number']);
-            $db->bind(':fname', $_POST['first_name']);
-            $db->bind(':lname', $_POST['last_name']);
-            $db->bind(':ktp', $_POST['identity_number']);
-            $db->bind(':gender', $_POST['gender']);
-            $db->bind(':marital', $_POST['marital_status']);
-            $db->bind(':child', $_POST['number_of_dependents'] ?? 0);
-            $db->bind(':dob', $_POST['date_of_birth']);
+            $this->db->query($query);
             
-            // Tab 3: Kontak
-            $db->bind(':email', $_POST['email']);
-            $db->bind(':phone', $_POST['phone']);
-            $db->bind(':addr', $_POST['address']);
-
-            // Tab 2: Kepegawaian
-            $db->bind(':dept', $_POST['department_id']);
-            $db->bind(':pos', $_POST['position']);
-            $db->bind(':level', $_POST['employee_level']);
-            $db->bind(':status_emp', 'active'); // Default active string
-            $db->bind(':hire', $_POST['hire_date']);
-            $db->bind(':salary', $salary);
-
-            // Tab 4: Bank
-            $db->bind(':bank', $_POST['bank_name']);
-            $db->bind(':rek', $_POST['bank_account_number']);
-            $db->bind(':rek_name', $_POST['bank_account_name']);
-            $db->bind(':npwp', $_POST['npwp']);
+            $this->db->bind(':nik', $_POST['employee_number']);
+            $this->db->bind(':fname', $_POST['first_name']);
+            $this->db->bind(':lname', $_POST['last_name']);
+            $this->db->bind(':ktp', $_POST['identity_number']);
+            $this->db->bind(':gender', $_POST['gender']);
+            $this->db->bind(':marital', $_POST['marital_status']);
+            $this->db->bind(':child', $_POST['number_of_dependents'] ?? 0);
+            $this->db->bind(':dob', $_POST['date_of_birth']);
+            $this->db->bind(':email', $_POST['email']);
+            $this->db->bind(':phone', $_POST['phone']);
+            $this->db->bind(':addr', $_POST['address']);
+            $this->db->bind(':dept', !empty($_POST['department_id']) ? $_POST['department_id'] : null);
+            $this->db->bind(':division', !empty($_POST['division_id']) ? $_POST['division_id'] : null);
+            $this->db->bind(':pos', $_POST['position']);
+            $this->db->bind(':level', $_POST['employee_level']);
+            $this->db->bind(':grade', !empty($_POST['salary_grade_id']) ? $_POST['salary_grade_id'] : null);
+            $this->db->bind(':status_emp', 'active');
+            $this->db->bind(':hire', $_POST['hire_date']);
+            $this->db->bind(':salary', $salary);
+            $this->db->bind(':bank', $_POST['bank_name']);
+            $this->db->bind(':rek', $_POST['bank_account_number']);
+            $this->db->bind(':rek_name', $_POST['bank_account_name']);
+            $this->db->bind(':npwp', $_POST['npwp']);
+            $this->db->bind(':active', 1);
             
-            // System
-            $db->bind(':active', 1);
-
-            if ($db->execute()) {
-                header('Location: ' . BASEURL . '/admin/employees');
+            if ($this->db->execute()) {
+                header('Location: ' . BASEURL . '/admin/employees?success=created');
                 exit;
             } else {
-                die("Gagal menyimpan data lengkap.");
+                die("Gagal menyimpan data.");
             }
         }
     }
 
+    // --- EDIT FORM ---
     public function edit($id) {
-        $db = new Database;
-        $db->query("SELECT * FROM employees WHERE id = :id");
-        $db->bind(':id', $id);
-        $emp = $db->single();
+        $this->db->query("SELECT * FROM employees WHERE id = :id");
+        $this->db->bind(':id', $id);
+        $emp = $this->db->single();
         
-        $db->query("SELECT * FROM departments");
+        if(!$emp) { header('Location: ' . BASEURL . '/admin/employees'); exit; }
+
+        $this->db->query("SELECT * FROM departments WHERE is_active = 1");
+        $departments = $this->db->resultSet();
+
+        // Ambil Divisi berdasarkan departemen karyawan saat ini
+        $divisions = [];
+        if($emp['department_id']) {
+            $this->db->query("SELECT * FROM divisions WHERE department_id = :did AND is_active = 1");
+            $this->db->bind(':did', $emp['department_id']);
+            $divisions = $this->db->resultSet();
+        }
+
+        $this->db->query("SELECT * FROM salary_grades ORDER BY id ASC");
+        $grades = $this->db->resultSet();
+
         $data = [
             'title' => 'Edit Karyawan',
             'content_view' => 'admin/employees/edit',
             'employee' => $emp,
-            'departments' => $db->resultSet()
+            'departments' => $departments,
+            'divisions' => $divisions,
+            'grades' => $grades
         ];
         $this->view('admin/layouts/admin-layout', $data);
     }
 
-    // --- UPDATE LENGKAP (ALL FIELDS) ---
+    // --- UPDATE PROSES ---
     public function update($id) {
         if ($_SERVER['REQUEST_METHOD'] == 'POST') {
-            $db = new Database;
             $salary = preg_replace('/[^0-9]/', '', $_POST['salary'] ?? '0');
-
-            $query = "UPDATE employees SET 
-                        employee_number = :nik, first_name = :fname, last_name = :lname,
-                        identity_number = :ktp, gender = :gender, marital_status = :marital, number_of_dependents = :child, date_of_birth = :dob,
-                        email = :email, phone = :phone, address = :addr,
-                        department_id = :dept, position = :pos, employee_level = :level, hire_date = :hire, salary = :salary,
-                        bank_name = :bank, bank_account_number = :rek, bank_account_name = :rek_name, npwp = :npwp,
-                        is_active = :active
-                      WHERE id = :id";
             
-            $db->query($query);
-            $db->bind(':id', $id);
-            // Binding data sama persis dengan store()
-            $db->bind(':nik', $_POST['employee_number']);
-            $db->bind(':fname', $_POST['first_name']);
-            $db->bind(':lname', $_POST['last_name']);
-            $db->bind(':ktp', $_POST['identity_number']);
-            $db->bind(':gender', $_POST['gender']);
-            $db->bind(':marital', $_POST['marital_status']);
-            $db->bind(':child', $_POST['number_of_dependents'] ?? 0);
-            $db->bind(':dob', $_POST['date_of_birth']);
-            $db->bind(':email', $_POST['email']);
-            $db->bind(':phone', $_POST['phone']);
-            $db->bind(':addr', $_POST['address']);
-            $db->bind(':dept', $_POST['department_id']);
-            $db->bind(':pos', $_POST['position']);
-            $db->bind(':level', $_POST['employee_level']);
-            $db->bind(':hire', $_POST['hire_date']);
-            $db->bind(':salary', $salary);
-            $db->bind(':bank', $_POST['bank_name']);
-            $db->bind(':rek', $_POST['bank_account_number']);
-            $db->bind(':rek_name', $_POST['bank_account_name']);
-            $db->bind(':npwp', $_POST['npwp']);
-            $db->bind(':active', $_POST['is_active']);
-
-            if ($db->execute()) {
-                header('Location: ' . BASEURL . '/admin/employees');
+            $query = "UPDATE employees SET
+                employee_number = :nik, first_name = :fname, last_name = :lname,
+                identity_number = :ktp, gender = :gender, marital_status = :marital, 
+                number_of_dependents = :child, date_of_birth = :dob,
+                email = :email, phone = :phone, address = :addr,
+                department_id = :dept, division_id = :division, position = :pos, 
+                employee_level = :level, salary_grade_id = :grade, hire_date = :hire, salary = :salary,
+                bank_name = :bank, bank_account_number = :rek, 
+                bank_account_name = :rek_name, npwp = :npwp,
+                is_active = :active
+            WHERE id = :id";
+            
+            $this->db->query($query);
+            $this->db->bind(':id', $id);
+            $this->db->bind(':nik', $_POST['employee_number']);
+            $this->db->bind(':fname', $_POST['first_name']);
+            $this->db->bind(':lname', $_POST['last_name']);
+            $this->db->bind(':ktp', $_POST['identity_number']);
+            $this->db->bind(':gender', $_POST['gender']);
+            $this->db->bind(':marital', $_POST['marital_status']);
+            $this->db->bind(':child', $_POST['number_of_dependents'] ?? 0);
+            $this->db->bind(':dob', $_POST['date_of_birth']);
+            $this->db->bind(':email', $_POST['email']);
+            $this->db->bind(':phone', $_POST['phone']);
+            $this->db->bind(':addr', $_POST['address']);
+            $this->db->bind(':dept', !empty($_POST['department_id']) ? $_POST['department_id'] : null);
+            $this->db->bind(':division', !empty($_POST['division_id']) ? $_POST['division_id'] : null);
+            $this->db->bind(':pos', $_POST['position']);
+            $this->db->bind(':level', $_POST['employee_level']);
+            $this->db->bind(':grade', !empty($_POST['salary_grade_id']) ? $_POST['salary_grade_id'] : null);
+            $this->db->bind(':hire', $_POST['hire_date']);
+            $this->db->bind(':salary', $salary);
+            $this->db->bind(':bank', $_POST['bank_name']);
+            $this->db->bind(':rek', $_POST['bank_account_number']);
+            $this->db->bind(':rek_name', $_POST['bank_account_name']);
+            $this->db->bind(':npwp', $_POST['npwp']);
+            $this->db->bind(':active', $_POST['is_active']);
+            
+            if ($this->db->execute()) {
+                header('Location: ' . BASEURL . '/admin/employees?success=updated');
                 exit;
             } else {
-                die("Gagal update data lengkap ID $id");
+                die("Gagal update data.");
             }
         }
     }
 
     public function delete($id) {
-        $db = new Database;
-        $db->query("DELETE FROM employees WHERE id = :id");
-        $db->bind(':id', $id);
-        $db->execute();
+        $this->db->query("DELETE FROM users WHERE employee_id = :id");
+        $this->db->bind(':id', $id);
+        $this->db->execute();
+
+        $this->db->query("DELETE FROM employees WHERE id = :id");
+        $this->db->bind(':id', $id);
+        if($this->db->execute()) {
+            header('Location: ' . BASEURL . '/admin/employees?success=deleted');
+        }
+    }
+    // --- SYNC AKUN OTOMATIS ---
+    public function sync() {
+        // 1. Cari karyawan aktif yang belum punya akun, sekalian ambil 'employee_level'
+        $query = "SELECT e.id, e.employee_number, e.employee_level 
+                  FROM employees e 
+                  LEFT JOIN users u ON e.id = u.employee_id 
+                  WHERE u.employee_id IS NULL AND e.is_active = 1";
+        
+        $this->db->query($query);
+        $unregistered_employees = $this->db->resultSet();
+
+        $synced_count = 0;
+
+        // 2. Loop dan buatkan akun default
+        if (count($unregistered_employees) > 0) {
+            // Enkripsi password default 'password'
+            $default_password = password_hash('password', PASSWORD_DEFAULT); 
+            
+            foreach ($unregistered_employees as $emp) {
+                
+                // Set default role ke 'staff'
+                $role = 'staff'; 
+                
+                // Cek kalau levelnya direktur, otomatis set jadi super_admin
+                $level = strtolower($emp['employee_level'] ?? '');
+                if (str_contains($level, 'direktur') || str_contains($level, 'dirut')) {
+                    $role = 'super_admin';
+                }
+
+                // Insert data ke tabel users
+                $this->db->query("INSERT INTO users (employee_id, username, password, role) 
+                                  VALUES (:employee_id, :username, :password, :role)");
+                $this->db->bind(':employee_id', $emp['id']);
+                $this->db->bind(':username', $emp['employee_number']);
+                $this->db->bind(':password', $default_password);
+                $this->db->bind(':role', $role); 
+                
+                if ($this->db->execute()) {
+                    $synced_count++;
+                }
+            }
+        }
+
+        // 3. Kembalikan ke halaman direktori dengan SweetAlert (Flasher 3 Parameter)
+        if ($synced_count > 0) {
+            Flasher::setFlash('Berhasil', "$synced_count Akun baru berhasil dibuat & disinkronisasi.", 'success');
+        } else {
+            Flasher::setFlash('Info', "Semua karyawan aktif sudah memiliki akun login.", 'info');
+        }
+        
         header('Location: ' . BASEURL . '/admin/employees');
+        exit;
     }
 }

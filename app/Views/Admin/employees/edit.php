@@ -128,7 +128,7 @@
                         <option value="supervisor" <?= ($employee['employee_level']??'')=='supervisor'?'selected':'' ?>>Supervisor</option>
                         <option value="staff" <?= ($employee['employee_level']??'')=='staff'?'selected':'' ?>>Staff</option>
                         <option value="harian" <?= ($employee['employee_level']??'')=='harian'?'selected':'' ?>>Harian</option>
-                    </select>
+                        </select>
                     </div>
                     <div>
                         <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Status Aktif</label>
@@ -227,6 +227,7 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    // 1. FORMAT CURRENCY (Aman, tidak diubah)
     const inputs = document.querySelectorAll('.currency-input');
     inputs.forEach(inp => {
         inp.addEventListener('keyup', function(e) {
@@ -235,9 +236,14 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
+    // 2. DEKLARASI ELEMEN (Cukup panggil sekali saja!)
     const deptSelect = document.getElementById('department_select');
     const divSelect = document.getElementById('division_select');
+    const levelSelect = document.getElementById('level_select'); 
+
     if(deptSelect && divSelect) {
+        
+        // 3. LOGIC AJAX FETCH DIVISI (Aman, tidak diubah)
         deptSelect.addEventListener('change', function() {
             const deptId = this.value;
             divSelect.innerHTML = '<option value="">Loading...</option>';
@@ -255,34 +261,44 @@ document.addEventListener('DOMContentLoaded', function() {
                 divSelect.innerHTML = '<option value="">-- Pilih Departemen Dulu --</option>';
             }
         });
-        // Logic otomatis untuk Level Direktur
-const levelSelect = document.getElementById('level_select'); // Pastikan id="level_select" sudah ditambah di HTML select level
-const deptSelect = document.getElementById('department_select');
 
-if(levelSelect && deptSelect) {
-    const handleLevelChange = () => {
-        if(levelSelect.value === 'direktur') {
-            // Jika Direktur: Tidak wajib pilih departemen & disable inputnya
-            deptSelect.removeAttribute('required');
-            deptSelect.disabled = true;
-            deptSelect.value = ""; // Kosongkan pilihan
-            // Trigger change event untuk reset dropdown Divisi juga
-            deptSelect.dispatchEvent(new Event('change'));
-            deptSelect.classList.add('opacity-50', 'cursor-not-allowed');
-        } else {
-            // Jika selain Direktur: Wajib pilih departemen
-            deptSelect.setAttribute('required', 'required');
-            deptSelect.disabled = false;
-            deptSelect.classList.remove('opacity-50', 'cursor-not-allowed');
+        // 4. LOGIC OTOMATIS DIREKTUR (Diperbaiki & Disempurnakan)
+        if(levelSelect) {
+            const handleLevelChange = () => {
+                if(levelSelect.value === 'direktur') {
+                    // JIKA DIREKTUR: Hapus required, matikan dropdown, kosongkan nilai
+                    deptSelect.removeAttribute('required');
+                    divSelect.removeAttribute('required'); // Opsional jika divisi wajib
+                    
+                    deptSelect.disabled = true;
+                    divSelect.disabled = true;
+                    
+                    deptSelect.value = ""; 
+                    
+                    // Trigger change biar AJAX jalan mereset divisi ke "-- Pilih Departemen Dulu --"
+                    deptSelect.dispatchEvent(new Event('change'));
+                    
+                    // Tambahkan efek visual biar kelihatan mati
+                    deptSelect.classList.add('opacity-50', 'cursor-not-allowed', 'bg-gray-100');
+                    divSelect.classList.add('opacity-50', 'cursor-not-allowed', 'bg-gray-100');
+                } else {
+                    // JIKA SELAIN DIREKTUR: Wajib pilih departemen & nyalakan dropdown
+                    deptSelect.setAttribute('required', 'required');
+                    
+                    deptSelect.disabled = false;
+                    divSelect.disabled = false;
+                    
+                    // Kembalikan efek visual ke normal
+                    deptSelect.classList.remove('opacity-50', 'cursor-not-allowed', 'bg-gray-100');
+                    divSelect.classList.remove('opacity-50', 'cursor-not-allowed', 'bg-gray-100');
+                }
+            };
+
+            levelSelect.addEventListener('change', handleLevelChange);
+            
+            // Jalankan sekali saat halaman load (penting untuk halaman Edit!)
+            handleLevelChange();
         }
-    };
-
-    levelSelect.addEventListener('change', handleLevelChange);
-    // Jalankan sekali saat halaman load (penting untuk halaman Edit)
-    handleLevelChange();
-}
     }
-    
 });
-
 </script>

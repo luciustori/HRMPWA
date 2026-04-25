@@ -24,127 +24,115 @@ class Requests extends Controller {
     }
 
     // --- 1. INDEX (HALAMAN UTAMA) ---
+    // --- 1. INDEX (HALAMAN UTAMA) ---
     public function index() {
-        $access = $this->getDepartmentAccess();
-        $dept_filter = ($access['type'] === 'restricted') ? " AND e.department_id = " . $access['dept_id'] : "";
+        $my_emp_id = $_SESSION['employee_id'] ?? 0;
+        $my_role = strtolower($_SESSION['role'] ?? '');
 
-        $period_month = str_pad($_GET['month'] ?? date('m'), 2, '0', STR_PAD_LEFT);
-        $period_year = $_GET['year'] ?? date('Y');
-        
-        $status_filter = $_GET['status'] ?? '';
-        $status_sql = $status_filter ? " AND r.status = :status " : "";
+        // 1. FILTER TIERING (HOD & BOD)
+        $this->db->query("SELECT id FROM departments WHERE manager_id = :id");
+        $this->db->bind(':id', $my_emp_id);
+        $mgr_depts = array_column($this->db->resultSet(), 'id');
 
-        $query_leave = "SELECT r.*, e.first_name, e.last_name, lt.leave_type_name, lt.leave_code, d.department_name
-                        FROM leave_requests r
-                        JOIN employees e ON r.employee_id = e.id
-                        LEFT JOIN departments d ON e.department_id = d.id
-                        JOIN leave_types lt ON r.leave_type_id = lt.id
-                        WHERE MONTH(r.start_date) = :m AND YEAR(r.start_date) = :y 
-                        $dept_filter $status_sql
-                        ORDER BY FIELD(r.status, 'pending', 'approved', 'rejected'), r.created_at DESC";
-        
-        $this->db->query($query_leave);
-        $this->db->bind(':m', $period_month);
-        $this->db->bind(':y', $period_year);
-        if($status_filter) $this->db->bind(':status', $status_filter);
-        $leaves = $this->db->resultSet();
+        $this->db->query("SELECT id FROM departments WHERE director_id = :id");
+        $this->db->bind(':id', $my_emp_id);
+        $dir_depts = array_column($this->db->resultSet(), 'id');
 
-        $query_ot = "SELECT r.*, e.first_name, e.last_name, d.department_name
-                     FROM overtime_requests r
-                     JOIN employees e ON r.employee_id = e.id
-                     LEFT JOIN departments d ON e.department_id = d.id
-                     WHERE MONTH(r.overtime_date) = :m AND YEAR(r.overtime_date) = :y 
-                     $dept_filter $status_sql
-                     ORDER BY FIELD(r.status, 'pending', 'approved', 'rejected'), r.created_at DESC";
-        
-        $this->db->query($query_ot);
-        $this->db->bind(':m', $period_month);
-        $this->db->bind(':y', $period_year);
-        if($status_filter) $this->db->bind(':status', $status_filter);
-        $overtimes = $this->db->resultSet();
-
-        $query_trip = "SELECT r.*, e.first_name, e.last_name, d.department_name
-                       FROM business_trip_requests r
-                       JOIN employees e ON r.employee_id = e.id
-                       LEFT JOIN departments d ON e.department_id = d.id
-                       WHERE MONTH(r.start_date) = :m AND YEAR(r.start_date) = :y 
-                       $dept_filter $status_sql
-                       ORDER BY FIELD(r.status, 'pending', 'approved', 'rejected'), r.created_at DESC";
-
-        $this->db->query($query_trip);
-        $this->db->bind(':m', $period_month);
-        $this->db->bind(':y', $period_year);
-        if($status_filter) $this->db->bind(':status', $status_filter);
-        $trips = $this->db->resultSet();
-
-        $all_requests = [];
-        foreach($leaves as $k => $v) {
-            $leaves[$k]['general_type'] = 'leave';
-            $leaves[$k]['req_label'] = $v['leave_type_name'];
-            $all_requests[] = $leaves[$k];
-        }
-        foreach($overtimes as $k => $v) {
-            $overtimes[$k]['general_type'] = 'overtime';
-            $overtimes[$k]['req_label'] = 'Lembur';
-            $all_requests[] = $overtimes[$k];
-        }
-        foreach($trips as $k => $v) {
-            $trips[$k]['general_type'] = 'trip';
-            $trips[$k]['req_label'] = 'SPPD: ' . $v['destination'];
-            $all_requests[] = $trips[$k];
+        $tier_filter = "";
+        if ($my_role !== 'super_admin' && $my_role !== 'admin') {
+            $clauses = [];
+            if (!empty($mgr_depts)) {
+                $in = implode(',', $mgr_depts);
+                $clauses[] = "(e.department_id IN ($in) AND e.id != $my_emp_id AND e.employee_level NOT IN ('direktur', 'manager'))";
+            }
+            if (!empty($dir_depts)) {
+                $in = implode(',', $dir_depts);
+                $clauses[] = "(e.department_id IN ($in) AND e.id != $my_emp_id AND e.employee_level = 'manager')";
+            }
+            $tier_filter = !empty($clauses) ? " AND (" . implode(" OR ", $clauses) . ")" : " AND 1=0";
         }
 
-        usort($all_requests, function($a, $b) {
-            return strtotime($b['created_at'] ?? 'now') - strtotime($a['created_at'] ?? 'now');
+        // 2. TANGKAP FILTER DARI URL (View Butuh Variabel Ini!)
+        $data['status_filter'] = $_GET['status'] ?? 'pending';
+        $data['period_month'] = str_pad($_GET['month'] ?? date('m'), 2, '0', STR_PAD_LEFT);
+        $data['period_year'] = $_GET['year'] ?? date('Y');
+
+        $status_sql = " AND r.status = :status ";
+
+        // 3. STATISTIK CARD (PENDING, APPROVED, REJECTED)
+        $data['stats'] = ['pending' => 0, 'approved' => 0, 'rejected' => 0];
+        $statuses = ['pending', 'approved', 'rejected'];
+        
+        foreach ($statuses as $stat) {
+            $this->db->query("SELECT COUNT(*) as t FROM leave_requests r JOIN employees e ON r.employee_id = e.id WHERE r.status = '$stat' $tier_filter AND MONTH(r.start_date) = :m AND YEAR(r.start_date) = :y");
+            $this->db->bind(':m', $data['period_month']); $this->db->bind(':y', $data['period_year']);
+            $res1 = $this->db->single(); $q1 = $res1 ? $res1['t'] : 0;
+
+            $this->db->query("SELECT COUNT(*) as t FROM overtime_requests r JOIN employees e ON r.employee_id = e.id WHERE r.status = '$stat' $tier_filter AND MONTH(r.overtime_date) = :m AND YEAR(r.overtime_date) = :y");
+            $this->db->bind(':m', $data['period_month']); $this->db->bind(':y', $data['period_year']);
+            $res2 = $this->db->single(); $q2 = $res2 ? $res2['t'] : 0;
+
+            $this->db->query("SELECT COUNT(*) as t FROM business_trip_requests r JOIN employees e ON r.employee_id = e.id WHERE r.status = '$stat' $tier_filter AND MONTH(r.start_date) = :m AND YEAR(r.start_date) = :y");
+            $this->db->bind(':m', $data['period_month']); $this->db->bind(':y', $data['period_year']);
+            $res3 = $this->db->single(); $q3 = $res3 ? $res3['t'] : 0;
+
+            $data['stats'][$stat] = $q1 + $q2 + $q3;
+        }
+
+        // 4. DATA TABEL (LEAVES, OVERTIMES, TRIPS) - TEMBAK LANGSUNG KE TABEL ASLI (No View)
+        $this->db->query("SELECT r.*, e.first_name, e.last_name, e.employee_number, e.department_id, d.department_name, lt.leave_type_name, lt.leave_code, 'leave' as general_type 
+                          FROM leave_requests r 
+                          JOIN employees e ON r.employee_id = e.id 
+                          LEFT JOIN departments d ON e.department_id = d.id
+                          LEFT JOIN leave_types lt ON r.leave_type_id = lt.id
+                          WHERE 1=1 $status_sql $tier_filter AND MONTH(r.start_date) = :m AND YEAR(r.start_date) = :y ORDER BY r.created_at DESC");
+        $this->db->bind(':status', $data['status_filter']);
+        $this->db->bind(':m', $data['period_month']);
+        $this->db->bind(':y', $data['period_year']);
+        $data['leaves'] = $this->db->resultSet() ?: [];
+
+        $this->db->query("SELECT r.*, e.first_name, e.last_name, e.employee_number, e.department_id, d.department_name, 'overtime' as general_type 
+                          FROM overtime_requests r 
+                          JOIN employees e ON r.employee_id = e.id 
+                          LEFT JOIN departments d ON e.department_id = d.id
+                          WHERE 1=1 $status_sql $tier_filter AND MONTH(r.overtime_date) = :m AND YEAR(r.overtime_date) = :y ORDER BY r.created_at DESC");
+        $this->db->bind(':status', $data['status_filter']);
+        $this->db->bind(':m', $data['period_month']);
+        $this->db->bind(':y', $data['period_year']);
+        $data['overtimes'] = $this->db->resultSet() ?: [];
+
+        $this->db->query("SELECT r.*, e.first_name, e.last_name, e.employee_number, e.department_id, d.department_name, 'trip' as general_type 
+                          FROM business_trip_requests r 
+                          JOIN employees e ON r.employee_id = e.id 
+                          LEFT JOIN departments d ON e.department_id = d.id
+                          WHERE 1=1 $status_sql $tier_filter AND MONTH(r.start_date) = :m AND YEAR(r.start_date) = :y ORDER BY r.created_at DESC");
+        $this->db->bind(':status', $data['status_filter']);
+        $this->db->bind(':m', $data['period_month']);
+        $this->db->bind(':y', $data['period_year']);
+        $data['trips'] = $this->db->resultSet() ?: [];
+
+        // Gabungkan semua data untuk Tab "Semua"
+        $data['all_requests'] = array_merge($data['leaves'], $data['overtimes'], $data['trips']);
+        usort($data['all_requests'], function($a, $b) {
+            return strtotime($b['created_at']) - strtotime($a['created_at']);
         });
 
-        $this->db->query("SELECT status FROM leave_requests r JOIN employees e ON r.employee_id = e.id WHERE MONTH(r.start_date) = :m AND YEAR(r.start_date) = :y $dept_filter");
-        $this->db->bind(':m', $period_month); $this->db->bind(':y', $period_year);
-        $all_leaves = $this->db->resultSet();
+        // 5. DATA PENDUKUNG UNTUK MODAL CREATE PENGAJUAN
+        $this->db->query("SELECT id, first_name, last_name, employee_number FROM employees WHERE is_active = 1");
+        $data['employees'] = $this->db->resultSet() ?: [];
         
-        $this->db->query("SELECT status FROM overtime_requests r JOIN employees e ON r.employee_id = e.id WHERE MONTH(r.overtime_date) = :m AND YEAR(r.overtime_date) = :y $dept_filter");
-        $this->db->bind(':m', $period_month); $this->db->bind(':y', $period_year);
-        $all_ots = $this->db->resultSet();
+        $this->db->query("SELECT * FROM leave_types WHERE leave_code NOT IN ('ANNUAL', 'CUTI_TAHUNAN', 'DL', 'DINAS_LUAR')");
+        $data['permit_types'] = $this->db->resultSet() ?: [];
 
-        $this->db->query("SELECT status FROM business_trip_requests r JOIN employees e ON r.employee_id = e.id WHERE MONTH(r.start_date) = :m AND YEAR(r.start_date) = :y $dept_filter");
-        $this->db->bind(':m', $period_month); $this->db->bind(':y', $period_year);
-        $all_trips = $this->db->resultSet();
+        $this->db->query("SELECT * FROM leave_types WHERE leave_code IN ('ANNUAL', 'CUTI_TAHUNAN') LIMIT 1");
+        $data['annual_leave'] = $this->db->single() ?: [];
 
-        $all_reqs = array_merge($all_leaves, $all_ots, $all_trips);
-        $stats = [
-            'pending'  => count(array_filter($all_reqs, fn($i) => $i['status'] == 'pending')),
-            'approved' => count(array_filter($all_reqs, fn($i) => $i['status'] == 'approved')),
-            'rejected' => count(array_filter($all_reqs, fn($i) => $i['status'] == 'rejected'))
-        ];
+        $this->db->query("SELECT * FROM leave_types WHERE leave_code IN ('DL', 'DINAS_LUAR') LIMIT 1");
+        $data['duty_leave'] = $this->db->single() ?: [];
 
-        $this->db->query("SELECT id, first_name, last_name, employee_number FROM employees WHERE is_active = 1 ORDER BY first_name ASC");
-        $employees = $this->db->resultSet();
-
-        $this->db->query("SELECT * FROM leave_types WHERE is_active = 1 AND leave_code NOT IN ('ANNUAL', 'CUTI_TAHUNAN', 'DL', 'DINAS_LUAR') AND leave_type_name NOT LIKE '%Tahunan%'"); 
-        $permit_types = $this->db->resultSet();
-
-        $this->db->query("SELECT * FROM leave_types WHERE is_active = 1 AND leave_code IN ('ANNUAL', 'CUTI_TAHUNAN') LIMIT 1");
-        $annual_leave = $this->db->single();
-
-        $this->db->query("SELECT * FROM leave_types WHERE is_active = 1 AND leave_code IN ('DL', 'DINAS_LUAR') LIMIT 1");
-        $duty_leave = $this->db->single();
-
-        $data = [
-            'title' => 'Pusat Persetujuan',
-            'content_view' => 'admin/requests/index',
-            'all_requests' => $all_requests,
-            'leaves' => $leaves,
-            'overtimes' => $overtimes,
-            'trips' => $trips,
-            'stats' => $stats,
-            'employees' => $employees,
-            'permit_types' => $permit_types,
-            'annual_leave' => $annual_leave,
-            'duty_leave' => $duty_leave,
-            'period_month' => $period_month,
-            'period_year' => $period_year,
-            'status_filter' => $status_filter
-        ];
+        // Render View Utama
+        $data['title'] = 'Approval Requests';
+        $data['content_view'] = 'admin/requests/index';
         $this->view('admin/layouts/admin-layout', $data);
     }
 

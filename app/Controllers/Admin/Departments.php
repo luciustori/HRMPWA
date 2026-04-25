@@ -37,12 +37,13 @@ class Departments extends Controller {
         // 1. DATA UTAMA: Departemen + Stats
         $this->db->query("
             SELECT d.*, 
-                   CONCAT(e.first_name, ' ', e.last_name) as manager_name,
-                   e.employee_number as manager_code,
-                   (SELECT COUNT(*) FROM divisions WHERE department_id = d.id AND is_active = 1) as total_divisions,
-                   (SELECT COUNT(*) FROM employees WHERE department_id = d.id AND is_active = 1) as total_employees
+                CONCAT(m.first_name, ' ', m.last_name) as manager_name,
+                CONCAT(dir.first_name, ' ', dir.last_name) as director_name, -- Ambil nama direktur
+                (SELECT COUNT(*) FROM divisions WHERE department_id = d.id AND is_active = 1) as total_divisions,
+                (SELECT COUNT(*) FROM employees WHERE department_id = d.id AND is_active = 1) as total_employees
             FROM departments d
-            LEFT JOIN employees e ON d.manager_id = e.id
+            LEFT JOIN employees m ON d.manager_id = m.id
+            LEFT JOIN employees dir ON d.director_id = dir.id -- Join buat Direktur
             ORDER BY d.department_name ASC
         ");
         $departments = $this->db->resultSet();
@@ -76,7 +77,7 @@ class Departments extends Controller {
         $total_emp = $this->db->single()['total'];
     
         // 4. DATA KARYAWAN (PENTING: Untuk Dropdown di Popup Create/Edit)
-        $this->db->query("SELECT id, first_name, last_name, employee_number FROM employees WHERE is_active = 1 ORDER BY first_name ASC");
+        $this->db->query("SELECT id, first_name, last_name, employee_number, employee_level FROM employees WHERE is_active = 1 ORDER BY first_name ASC");
         $employees = $this->db->resultSet();
     
         $data = [
@@ -108,24 +109,27 @@ class Departments extends Controller {
     }
 
     public function store() {
-        if ($_SERVER['REQUEST_METHOD'] == 'POST') {
-            $this->db->query("INSERT INTO departments (company_id, department_name, department_code, manager_id, description, is_active) 
-                              VALUES (:co_id, :name, :code, :mgr, :desc, 1)");
-            
-            $this->db->bind(':co_id', 1); // Default company ID 1
-            $this->db->bind(':name', $_POST['department_name']);
-            $this->db->bind(':code', strtoupper($_POST['department_code']));
-            $this->db->bind(':mgr', !empty($_POST['manager_id']) ? $_POST['manager_id'] : null);
-            $this->db->bind(':desc', $_POST['description']);
-            
-            if ($this->db->execute()) {
-                header('Location: ' . BASEURL . '/admin/departments?success=created');
-            } else {
-                header('Location: ' . BASEURL . '/admin/departments/create?error=failed');
-            }
-            exit;
+    if ($_SERVER['REQUEST_METHOD'] == 'POST') {
+        // Query disesuaikan dengan struktur tabel terbaru
+        $this->db->query("INSERT INTO departments (company_id, department_name, department_code, manager_id, director_id, description, is_active) 
+                          VALUES (:co_id, :name, :code, :mgr, :dir, :desc, 1)");
+        
+        $this->db->bind(':co_id', 1); // Sesuaikan ID perusahaan
+        $this->db->bind(':name', $_POST['department_name']);
+        $this->db->bind(':code', strtoupper($_POST['department_code']));
+        $this->db->bind(':mgr', !empty($_POST['manager_id']) ? $_POST['manager_id'] : null);
+        $this->db->bind(':dir', !empty($_POST['director_id']) ? $_POST['director_id'] : null);
+        $this->db->bind(':desc', $_POST['description']);
+        
+        if ($this->db->execute()) {
+            Flasher::setFlash('Berhasil', 'Departemen baru berhasil ditambahkan', 'success');
+        } else {
+            Flasher::setFlash('Gagal', 'Gagal menambahkan departemen', 'error');
         }
+        header('Location: ' . BASEURL . '/admin/departments');
+        exit;
     }
+}
 
     public function edit($id) {
         // Ambil data departemen
@@ -156,25 +160,48 @@ class Departments extends Controller {
             $id = $_POST['id'];
             
             $this->db->query("UPDATE departments SET 
-                              department_name = :name,
-                              department_code = :code,
-                              manager_id = :mgr,
-                              description = :desc,
-                              is_active = :active
-                              WHERE id = :id");
+                            department_name = :name,
+                            department_code = :code,
+                            manager_id = :mgr,
+                            director_id = :dir,
+                            description = :desc
+                            WHERE id = :id");
             
             $this->db->bind(':name', $_POST['department_name']);
             $this->db->bind(':code', strtoupper($_POST['department_code']));
             $this->db->bind(':mgr', !empty($_POST['manager_id']) ? $_POST['manager_id'] : null);
+            $this->db->bind(':dir', !empty($_POST['director_id']) ? $_POST['director_id'] : null);
             $this->db->bind(':desc', $_POST['description']);
-            $this->db->bind(':active', $_POST['is_active']);
             $this->db->bind(':id', $id);
             
             if ($this->db->execute()) {
-                header('Location: ' . BASEURL . '/admin/departments?success=updated');
+                Flasher::setFlash('Berhasil', 'Data departemen berhasil diperbarui', 'success');
             } else {
-                header('Location: ' . BASEURL . '/admin/departments/edit/' . $id . '?error=failed');
+                Flasher::setFlash('Gagal', 'Gagal memperbarui data departemen', 'error');
             }
+            header('Location: ' . BASEURL . '/admin/departments');
+            exit;
+        }
+    }
+
+    // Tambahkan fungsi ini di dalam class Departments
+    public function update_director() {
+        if ($_SERVER['REQUEST_METHOD'] == 'POST') {
+            $id = $_POST['id'];
+            // Gunakan logika null check yang sudah kita sepakati sebelumnya
+            $director_id = !empty($_POST['director_id']) ? $_POST['director_id'] : null;
+
+            $this->db->query("UPDATE departments SET director_id = :dir_id WHERE id = :id");
+            $this->db->bind(':dir_id', $director_id);
+            $this->db->bind(':id', $id);
+
+            if ($this->db->execute()) {
+                Flasher::setFlash('Berhasil', 'Direktur Pembina berhasil diperbarui', 'success');
+            } else {
+                Flasher::setFlash('Gagal', 'Gagal memperbarui Direktur Pembina', 'error');
+            }
+            
+            header('Location: ' . BASEURL . '/admin/departments');
             exit;
         }
     }

@@ -1,74 +1,3 @@
-<script>
-    window.departmentsApp = function() {
-        return {
-            // --- MODAL STATE ---
-            modalCreateDept: false,
-            modalEditDept: false,
-            modalCreateDiv: false,
-            modalEditDiv: false,
-
-            // --- EXPANDED ROWS STATE ---
-            expandedRows: [], 
-
-            // --- DEPARTEMEN FORM DATA ---
-            editDeptId: '',
-            editDeptName: '',
-            editDeptCode: '',
-            editDeptManager: '',
-            editDeptDesc: '',
-
-            // --- DIVISI FORM DATA ---
-            parentDeptId: '',
-            parentDeptName: '',
-            editDivId: '',
-            editDivName: '',
-            editDivCode: '',
-            editDivCoord: '',
-            editDivDesc: '',
-            editDivDeptId: '', 
-
-            // --- ACTIONS ---
-            
-            toggleRow(id) {
-                if (this.expandedRows.includes(id)) {
-                    this.expandedRows = this.expandedRows.filter(rowId => rowId !== id);
-                } else {
-                    this.expandedRows.push(id);
-                }
-            },
-
-            isExpanded(id) {
-                return this.expandedRows.includes(id);
-            },
-
-            openEditDept(dept) {
-                this.editDeptId = dept.id;
-                this.editDeptName = dept.department_name;
-                this.editDeptCode = dept.department_code;
-                this.editDeptManager = dept.manager_id ? dept.manager_id : '';
-                this.editDeptDesc = dept.description;
-                this.modalEditDept = true;
-            },
-
-            openCreateDiv(deptId, deptName) {
-                this.parentDeptId = deptId;
-                this.parentDeptName = deptName;
-                this.modalCreateDiv = true;
-            },
-
-            openEditDiv(div) {
-                this.editDivId = div.id;
-                this.editDivName = div.division_name;
-                this.editDivCode = div.division_code;
-                this.editDivCoord = div.coordinator_id ? div.coordinator_id : '';
-                this.editDivDesc = div.description;
-                this.editDivDeptId = div.department_id;
-                this.modalEditDiv = true;
-            }
-        };
-    }
-</script>
-
 <div x-data="window.departmentsApp()" class="space-y-6">
 
     <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -99,14 +28,15 @@
 
     <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
         <table class="w-full text-left border-collapse">
-            <thead>
-                <tr class="bg-slate-50 border-b border-slate-200 text-xs uppercase tracking-wider text-slate-500 font-bold">
-                    <th class="px-6 py-4 w-12 text-center">#</th>
-                    <th class="px-6 py-4">Departemen</th>
-                    <th class="px-6 py-4">Manager (HOD)</th>
-                    <th class="px-6 py-4">Kapasitas</th>
-                    <th class="px-6 py-4 text-center">Status</th>
-                    <th class="px-6 py-4 text-right">Aksi</th>
+            <thead class="bg-slate-50 text-slate-500 font-bold uppercase tracking-wider text-[11px] border-b border-slate-100">
+                <tr>
+                    <th class="p-4 text-center w-12">#</th>
+                    <th class="p-4">Departemen</th>
+                    <th class="p-4">Manager (HOD)</th>
+                    <th class="p-4">Direktur (BOD)</th>
+                    <th class="p-4">Kapasitas</th>
+                    <th class="p-4 text-center">Status</th>
+                    <th class="p-4 text-center">Aksi</th>
                 </tr>
             </thead>
             <tbody class="divide-y divide-slate-100">
@@ -134,18 +64,31 @@
                         </td>
 
                         <td class="px-6 py-4">
-                            <?php if ($dept['manager_name']): ?>
-                                <div class="flex items-center gap-3">
-                                    <img src="https://ui-avatars.com/api/?name=<?= urlencode($dept['manager_name']) ?>&background=random&color=fff&size=32" 
-                                         class="w-8 h-8 rounded-full border border-white shadow-sm" alt="Manager">
-                                    <div class="text-xs">
-                                        <p class="font-bold text-slate-700"><?= $dept['manager_name'] ?></p>
-                                        <p class="text-slate-400"><?= $dept['manager_code'] ?? '' ?></p>
+                            <div class="flex items-center gap-3">
+                                <div class="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 font-bold text-xs shadow-sm">
+                                    <?= substr($dept['manager_name'] ?? '?', 0, 1) ?>
+                                </div>
+                                <div class="font-bold text-slate-800 text-xs"><?= $dept['manager_name'] ?? '<span class="text-slate-400 font-normal">Belum Set</span>' ?></div>
+                            </div>
+                        </td>
+
+                        <td class="px-6 py-4">
+                            <div class="flex items-center justify-between group bg-slate-50/50 p-2 rounded-xl border border-transparent hover:border-emerald-100 hover:bg-white transition-all cursor-default">
+                                <div class="flex items-center gap-2">
+                                    <div class="w-7 h-7 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-600 font-bold text-[10px]">
+                                        <i class="ri-shield-user-line"></i>
+                                    </div>
+                                    <div class="text-[11px] font-bold text-slate-700">
+                                        <?= $dept['director_name'] ?? '<span class="text-slate-400 font-normal italic">Belum Ditentukan</span>' ?>
                                     </div>
                                 </div>
-                            <?php else: ?>
-                                <span class="text-xs text-slate-400 italic flex items-center gap-1"><i class="ri-error-warning-line"></i> Kosong</span>
-                            <?php endif; ?>
+                                
+                                <button onclick="openDirectorModal(<?= $dept['id'] ?>, '<?= $dept['department_name'] ?>', '<?= $dept['director_id'] ?>')" 
+                                        class="w-7 h-7 flex items-center justify-center rounded-lg text-emerald-400 hover:bg-emerald-50 hover:text-emerald-600 transition-all opacity-0 group-hover:opacity-100" 
+                                        title="Atur Direksi">
+                                    <i class="ri-edit-2-line text-sm"></i>
+                                </button>
+                            </div>
                         </td>
 
                         <td class="px-6 py-4 w-48">
@@ -451,5 +394,156 @@
             </div>
         </div>
     </div>
+    <div id="modalDirector" class="fixed inset-0 z-[999] hidden">
+        <div class="absolute inset-0 bg-slate-900/50 backdrop-blur-sm shadow-2xl transition-opacity"></div>
+        <div class="flex items-center justify-center min-h-screen p-4">
+            <div class="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden transform transition-all">
+                <div class="p-6 border-b border-slate-100 flex justify-between items-center bg-indigo-600 text-white">
+                    <div>
+                        <h3 class="font-bold text-lg">Set Direktur Pembina</h3>
+                        <p class="text-indigo-100 text-xs" id="display_dept_name"></p>
+                    </div>
+                    <button onclick="closeDirectorModal()" class="text-white/50 hover:text-white transition">
+                        <i class="ri-close-line text-2xl"></i>
+                    </button>
+                </div>
+                
+                <form action="<?= BASEURL ?>/admin/departments/update_director" method="POST" class="p-6">
+                    <input type="hidden" name="id" id="modal_dept_id">
+                    
+                    <div class="mb-6">
+                        <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Pilih Direktur Pembina (BOD)</label>
+                        <select name="director_id" id="modal_director_select" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-indigo-500 outline-none transition">
+                        <option value="">-- Tidak Ada / Lepas Jabatan --</option>
+                        <?php if(isset($data['employees'])): ?>
+                            <?php foreach ($data['employees'] as $emp): ?>
+                                <?php 
+                                    // Ambil levelnya, jadikan huruf kecil semua biar aman pas dicek
+                                    $level = strtolower($emp['employee_level'] ?? ''); 
+                                    
+                                    // Jika di dalam level ada kata 'direktur' atau 'direksi', tampilkan!
+                                    if(str_contains($level, 'direktur') || str_contains($level, 'direksi')): 
+                                ?>
+                                    <option value="<?= $emp['id'] ?>">
+                                        <?= $emp['first_name'] . ' ' . $emp['last_name'] ?> (<?= $emp['employee_number'] ?? '' ?>)
+                                    </option>
+                                <?php endif; ?>
+                            <?php endforeach; ?>
+                        <?php endif; ?>
+                    </select>
+                        <p class="mt-2 text-[10px] text-slate-400 italic leading-relaxed">
+                            *Direktur yang dipilih akan memiliki wewenang approval akhir (Tupoksi) untuk seluruh divisi di departemen ini.
+                        </p>
+                    </div>
+
+                    <div class="flex gap-3">
+                        <button type="button" onclick="closeDirectorModal()" class="flex-1 px-4 py-3 border border-slate-200 text-slate-600 rounded-xl font-bold text-sm hover:bg-slate-50 transition">Batal</button>
+                        <button type="submit" class="flex-1 px-4 py-3 bg-indigo-600 text-white rounded-xl font-bold text-sm shadow-lg shadow-indigo-200 hover:bg-indigo-700 transition">Simpan Perubahan</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
 
 </div>
+
+<script>
+    // ======================================================
+    // 1. ALPINE.JS / APP COMPONENT (Untuk Dept & Divisi)
+    // ======================================================
+    window.departmentsApp = function() {
+        return {
+            // --- MODAL STATE ---
+            modalCreateDept: false,
+            modalEditDept: false,
+            modalCreateDiv: false,
+            modalEditDiv: false,
+
+            // --- EXPANDED ROWS STATE ---
+            expandedRows: [], 
+
+            // --- DEPARTEMEN FORM DATA ---
+            editDeptId: '',
+            editDeptName: '',
+            editDeptCode: '',
+            editDeptManager: '',
+            editDeptDesc: '',
+
+            // --- DIVISI FORM DATA ---
+            parentDeptId: '',
+            parentDeptName: '',
+            editDivId: '',
+            editDivName: '',
+            editDivCode: '',
+            editDivCoord: '',
+            editDivDesc: '',
+            editDivDeptId: '', 
+
+            // --- ACTIONS ---
+            toggleRow(id) {
+                if (this.expandedRows.includes(id)) {
+                    this.expandedRows = this.expandedRows.filter(rowId => rowId !== id);
+                } else {
+                    this.expandedRows.push(id);
+                }
+            },
+
+            isExpanded(id) {
+                return this.expandedRows.includes(id);
+            },
+
+            openEditDept(dept) {
+                this.editDeptId = dept.id;
+                this.editDeptName = dept.department_name;
+                this.editDeptCode = dept.department_code;
+                this.editDeptManager = dept.manager_id ? dept.manager_id : '';
+                this.editDeptDesc = dept.description;
+                this.modalEditDept = true;
+            },
+
+            openCreateDiv(deptId, deptName) {
+                this.parentDeptId = deptId;
+                this.parentDeptName = deptName;
+                this.modalCreateDiv = true;
+            },
+
+            openEditDiv(div) {
+                this.editDivId = div.id;
+                this.editDivName = div.division_name;
+                this.editDivCode = div.division_code;
+                this.editDivCoord = div.coordinator_id ? div.coordinator_id : '';
+                this.editDivDesc = div.description;
+                this.editDivDeptId = div.department_id;
+                this.modalEditDiv = true;
+            }
+        };
+    }; // <--- KURUNG TUTUP departmentsApp HARUS DI SINI!
+
+    // ======================================================
+    // 2. VANILLA JS (Untuk Modal Direktur - Harus Global!)
+    // ======================================================
+    
+    function openDirectorModal(deptId, deptName, currentDirectorId) {
+        const modal = document.getElementById('modalDirector');
+        document.getElementById('modal_dept_id').value = deptId;
+        document.getElementById('display_dept_name').innerText = "Departemen: " + deptName;
+        
+        // Set value dropdown jika sudah ada direkturnya
+        const select = document.getElementById('modal_director_select');
+        select.value = currentDirectorId || "";
+        
+        modal.classList.remove('hidden');
+    }
+
+    function closeDirectorModal() {
+        document.getElementById('modalDirector').classList.add('hidden');
+    }
+
+    // Close modal saat klik area luar
+    window.onclick = function(event) {
+        const modal = document.getElementById('modalDirector');
+        if (modal && event.target == modal.firstElementChild) {
+            closeDirectorModal();
+        }
+    }
+</script>

@@ -252,9 +252,8 @@ class Employees extends Controller {
             header('Location: ' . BASEURL . '/admin/employees?success=deleted');
         }
     }
-    // --- SYNC AKUN OTOMATIS ---
+    // --- SYNC AKUN OTOMATIS (Update for Direktur) ---
     public function sync() {
-        // 1. Cari karyawan aktif yang belum punya akun, sekalian ambil 'employee_level'
         $query = "SELECT e.id, e.employee_number, e.employee_level 
                   FROM employees e 
                   LEFT JOIN users u ON e.id = u.employee_id 
@@ -262,26 +261,22 @@ class Employees extends Controller {
         
         $this->db->query($query);
         $unregistered_employees = $this->db->resultSet();
-
         $synced_count = 0;
 
-        // 2. Loop dan buatkan akun default
         if (count($unregistered_employees) > 0) {
-            // Enkripsi password default 'password'
             $default_password = password_hash('password', PASSWORD_DEFAULT); 
             
             foreach ($unregistered_employees as $emp) {
-                
-                // Set default role ke 'staff'
                 $role = 'staff'; 
-                
-                // Cek kalau levelnya direktur, otomatis set jadi super_admin
                 $level = strtolower($emp['employee_level'] ?? '');
+
+                // Level Direktur / Dirut otomatis dapet akses Super Admin
                 if (str_contains($level, 'direktur') || str_contains($level, 'dirut')) {
                     $role = 'super_admin';
+                } elseif (str_contains($level, 'manager')) {
+                    $role = 'admin'; 
                 }
 
-                // Insert data ke tabel users
                 $this->db->query("INSERT INTO users (employee_id, username, password, role) 
                                   VALUES (:employee_id, :username, :password, :role)");
                 $this->db->bind(':employee_id', $emp['id']);
@@ -289,17 +284,15 @@ class Employees extends Controller {
                 $this->db->bind(':password', $default_password);
                 $this->db->bind(':role', $role); 
                 
-                if ($this->db->execute()) {
-                    $synced_count++;
-                }
+                if ($this->db->execute()) { $synced_count++; }
             }
         }
 
-        // 3. Kembalikan ke halaman direktori dengan SweetAlert (Flasher 3 Parameter)
+        // Pancing SweetAlert pakai Flasher 3 Parameter
         if ($synced_count > 0) {
-            Flasher::setFlash('Berhasil', "$synced_count Akun baru berhasil dibuat & disinkronisasi.", 'success');
+            Flasher::setFlash('Berhasil', "$synced_count Akun baru berhasil disinkronisasi.", 'success');
         } else {
-            Flasher::setFlash('Info', "Semua karyawan aktif sudah memiliki akun login.", 'info');
+            Flasher::setFlash('Info', "Semua karyawan aktif sudah punya akun login.", 'info');
         }
         
         header('Location: ' . BASEURL . '/admin/employees');

@@ -114,14 +114,14 @@
                         <input type="text" name="position" placeholder="Ex: Staff IT" required class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-indigo-500 outline-none transition">
                     </div>
                     <div>
-                        <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Level Karyawan</label>
-                        <select name="employee_level" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-indigo-500 outline-none transition">
-                            <option value="direktur">Direktur</option>
-                            <option value="manager">Manager</option>
-                            <option value="supervisor">Supervisor</option>
-                            <option value="staff">Staff</option>
-                            <option value="harian">Harian / Kontrak</option>
-                        </select>
+                    <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Level Karyawan</label>
+                    <select name="employee_level" id="employee_level" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-indigo-500 outline-none transition">
+                        <option value="direktur">Direktur</option>
+                        <option value="manager">Manager</option>
+                        <option value="supervisor">Supervisor</option>
+                        <option value="staff" selected>Staff</option>
+                        <option value="harian">Harian / Kontrak</option>
+                    </select>
                     </div>
                     <div>
                         <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Tanggal Bergabung</label>
